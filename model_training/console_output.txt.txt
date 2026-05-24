@@ -1,0 +1,83 @@
+PS C:\Users\akhya\Desktop\Projects\amr-model> dotnet run --project AMR.Training
+CSC : warning CS1668: Invalid search path 'C:\CURL\lib' specified in 'LIB environment variable' -- 'directory does not exist'
+CSC : warning CS1668: Invalid search path 'C:\Zlib\lib' specified in 'LIB environment variable' -- 'directory does not exist'
+============================================================
+AMR Prediction Training Pipeline — Klebsiella pneumoniae
+============================================================
+Loading multi-omic integrated feature matrix...
+Loading features from: C:\Users\akhya\Desktop\Projects\amr-model\features\X_combined.csv
+Features: 39,876
+Genomes loaded: 2,507
+
+[AUDIT] Evaluating genome ID prefix distributions...
+  -> Source Prefix 573: 2384 isolates (95.1%)
+  -> Source Prefix 72407: 121 isolates (4.8%)
+  -> Source Prefix 574: 2 isolates (0.1%)
+[VERDICT] Cohort maps to a unified species container index (NCBI Taxon 573).
+          Randomized cross-validation splits are biologically stable.
+
+Loading phenotype target labels...
+Loading labels from: C:\Users\akhya\Desktop\Projects\amr-model\features\Y_labels_aligned.csv
+--> Raw antibiotic column headers found in your CSV: Amikacin, Cefepime, Fosfomycin, Piperacillin_Tazobactam
+
+==================================================
+  ⚡ CONFIGURING PIPELINE FOR: FOSFOMYCIN
+  Samples: 270 | Resistant: 77 (28.5%) | Susceptible: 193
+  Running 10-Fold Stratified Cross-Validation loop...
+  AUC:   0.8158 (95% CI: 0.7627 - 0.8689) | AUPRC: 0.7424
+  F1:    0.6407   Acc:   0.7789
+  Sens:  0.6908   Spec:  0.8109   Prec: 0.6209
+  Training final model on full dataset matrix...
+  Saved binary model: C:\Users\akhya\Desktop\Projects\amr-model\models\fosfomycin.zip
+  Exported ONNX inference model: C:\Users\akhya\Desktop\Projects\amr-model\models\fosfomycin.onnx
+
+==================================================
+  ⚡ CONFIGURING PIPELINE FOR: CEFEPIME
+  Samples: 1498 | Resistant: 925 (61.7%) | Susceptible: 573
+  Running 5-Fold Stratified Cross-Validation loop...
+  AUC:   0.9143 (95% CI: 0.9053 - 0.9234) | AUPRC: 0.9410
+  F1:    0.8737   Acc:   0.8406
+  Sens:  0.8953   Spec:  0.7536   Prec: 0.8539
+  Training final model on full dataset matrix...
+  Saved binary model: C:\Users\akhya\Desktop\Projects\amr-model\models\cefepime.zip
+  Exported ONNX inference model: C:\Users\akhya\Desktop\Projects\amr-model\models\cefepime.onnx
+
+==================================================
+  ⚡ CONFIGURING PIPELINE FOR: PIPERACILLIN/TAZOBACTAM
+  Samples: 1736 | Resistant: 1193 (68.7%) | Susceptible: 543
+  Running 5-Fold Stratified Cross-Validation loop...
+  AUC:   0.9577 (95% CI: 0.9478 - 0.9676) | AUPRC: 0.9794
+  F1:    0.9330   Acc:   0.9081
+  Sens:  0.9329   Spec:  0.8545   Prec: 0.9335
+  Training final model on full dataset matrix...
+  Saved binary model: C:\Users\akhya\Desktop\Projects\amr-model\models\piperacillin_tazobactam.zip
+  Exported ONNX inference model: C:\Users\akhya\Desktop\Projects\amr-model\models\piperacillin_tazobactam.onnx
+
+==================================================
+  ⚡ CONFIGURING PIPELINE FOR: AMIKACIN
+  Samples: 2167 | Resistant: 447 (20.6%) | Susceptible: 1720
+  Running 5-Fold Stratified Cross-Validation loop...
+  AUC:   0.9522 (95% CI: 0.9405 - 0.9638) | AUPRC: 0.8886
+  F1:    0.8204   Acc:   0.9258
+  Sens:  0.8178   Spec:  0.9541   Prec: 0.8235
+  Training final model on full dataset matrix...
+  Saved binary model: C:\Users\akhya\Desktop\Projects\amr-model\models\amikacin.zip
+  Exported ONNX inference model: C:\Users\akhya\Desktop\Projects\amr-model\models\amikacin.onnx
+
+===============================================================================================
+                     FINAL GENOMIC MODEL PERFORMANCE VS PanKA BENCHMARKS
+===============================================================================================
+Antibiotic              | Ours (AUC)   | 95% CI Range      | PanKA (AUC)  | Outcome
+-----------------------------------------------------------------------------------------------
+piperacillin/tazobactam | 0.9577       | [0.948, 0.968]    | 0.8400       | OURS WIN
+amikacin                | 0.9522       | [0.941, 0.964]    | 0.9150       | OURS WIN
+cefepime                | 0.9143       | [0.905, 0.923]    | 0.9220       | STAT_TIE 
+fosfomycin              | 0.8158       | [0.763, 0.869]    | 0.8520       | STAT_TIE
+===============================================================================================
+
+Validation spreadsheet records saved safely to: C:\Users\akhya\Desktop\Projects\amr-model\results\model_results.csv
+
+Training Pipeline Execution Complete!
+Models written to: C:\Users\akhya\Desktop\Projects\amr-model\models
+ONNX deployment packages generated successfully for the ASP.NET API.
+PS C:\Users\akhya\Desktop\Projects\amr-model> 

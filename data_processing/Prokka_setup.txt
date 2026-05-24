@@ -1,0 +1,227 @@
+# ==============================================================================
+# BIOINFORMATICS PIPELINE PROTOCOL: GENOME ANNOTATION VIA PROKKA
+# ==============================================================================
+# Framework: Prokka (Rapid Prokaryotic Genome Annotation)
+# Target Species: Klebsiella pneumoniae (NCBI Taxon 573)
+# Purpose: High-throughput annotation of raw FASTA/FNA assemblies for pangenomics
+# Developed by: Akhyar Ahmad (AMR ML Infrastructure Group, UET Lahore)
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# STEP 1: CONDA PACKAGE MANAGER INITIALIZATION & SWAP SPACE CONFIGURATION
+# ------------------------------------------------------------------------------
+# Pull Miniconda installer, set up environment paths, and configure 16GB swap file
+# to handle intensive BLAST and HMMER operations.
+
+# Download and install Miniconda3
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
+bash Miniconda3-latest-Linux-x86_64.sh -b -p $HOME/miniconda && \
+$HOME/miniconda/bin/conda init bash && \
+source ~/.bashrc
+
+# Activate and initialize conda
+source ~/miniconda/bin/activate && conda init bash && source ~/.bashrc
+
+# Clean existing conda cache
+conda clean -a -y
+
+# Configure 16GB Virtual Swap Memory (Crucial for low-RAM droplet servers)
+fallocate -l 16G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile
+
+
+# ------------------------------------------------------------------------------
+# STEP 2: CONDA ENVIRONMENT PROFILES & TOOL INSTALLATIONS
+# ------------------------------------------------------------------------------
+# Build isolated conda environment environments for downstream dependencies
+
+# Profile A: Standard AMR Utility Environment (Python 3.10)
+conda create -n amr_env python=3.10 -y
+conda activate amr_env
+
+# Install critical file transfer tools and primary bioinformatics suites
+pip install gdown
+gdown "https://drive.google.com/file/d/...?usp=sharing"
+
+# Install Prokka, Panaroo, Snippy, and RGI via mamba-accelerated solver
+conda install -c conda-forge -c bioconda prokka panaroo snippy --solver=libmamba -y
+conda install -c conda-forge -c bioconda rgi --solver=libmamba -y
+
+# Profile B: Dedicated High-Performance Prokka Environment (Blast 2.12.0)
+conda create -n prokka_final -c conda-forge -c bioconda prokka blast=2.12.0 -y
+
+
+# ------------------------------------------------------------------------------
+# STEP 3: DATA PREPARATION & CARD DATABASE INTEGRATION
+# ------------------------------------------------------------------------------
+# Extract biological cohorts and load localized CARD databases for resistome audits
+
+# Extract raw datasets
+apt install unzip -y && unzip data.zip -d data_temp
+
+# Locate phenotype index mappings
+find . -name "phenotypes.tsv"
+
+# Structure pipeline folders and align datasets
+mkdir -p data
+mv ./data_temp/content/drive/MyDrive/data/* ./data/
+rm -rf data_temp
+
+# Load the CARD database locally into the Resistance Gene Identifier (RGI)
+rgi load --card_json data/card/card.json --local
+
+# Install core data-science libraries in active python environment
+pip install pandas numpy biopython tqdm joblib scikit-learn imbalanced-learn
+
+
+# ------------------------------------------------------------------------------
+# STEP 4: PRE-FLIGHT SYSTEM VERIFICATION
+# ------------------------------------------------------------------------------
+# Validate compiler and package versions before committing massive cluster runs
+
+/root/miniconda/envs/prokka_final/bin/prokka --version
+prokka --version
+panaroo --version
+snippy --version
+rgi main --version
+
+# Perform single-isolate test run to verify dependencies (HMMER, Aragorn, etc.)
+# Test using base path:
+/root/miniconda/envs/amr_env/bin/prokka data/raw/genomes/573.66131.fasta --outdir test_out --force
+
+# Test using prokka_final path:
+/root/miniconda/envs/prokka_final/bin/prokka data/raw/genomes/573.66131.fna --outdir test_out --force
+
+
+# ------------------------------------------------------------------------------
+# STEP 5: GENOMIC DATA SEGMENTATION & CHUNK CREATION
+# ------------------------------------------------------------------------------
+# Slice the primary genome cohorts into 8 parallelizable partitions to divide workload
+# across separate CPU cores or cluster nodes.
+
+python3 -c "import os, math; \
+ids = [line.strip() for line in open('data/available_genome_ids.txt', 'r') if line.strip()]; \
+n = 8; chunk_size = math.ceil(len(ids) / n); \
+[(open(f'data/chunk_{i+1}.txt', 'w').write('\n'.join(ids[i*chunk_size:(i+1)*chunk_size]))) for i in range(n)]"
+
+
+# ------------------------------------------------------------------------------
+# STEP 6: HIGH-THROUGHPUT PARALLEL ANNOTATION ENGINE
+# ------------------------------------------------------------------------------
+# Launch GNU Parallel jobs detached in background to rapidly process annotations.
+
+# Prepare execution folders
+rm -rf data/processed/prokka_out
+mkdir -p data/processed/prokka_out
+
+# OPTION A: Multiplexed Execution inside a Detached TMUX Session
+# (Launch session first: `tmux new -s droplet_run`)
+nohup parallel --resume --joblog progress.log -j 2 \
+"conda run -n prokka_final prokka \
+--outdir data/processed/prokka_out/{} \
+--prefix {} \
+--genus Klebsiella \
+--species pneumoniae \
+--kingdom Bacteria \
+--cpus 2 --quiet --force \
+data/raw/genomes/{}.fna" \
+:::: data/raw/chunk_5.txt > annotation.log 2>&1 & disown
+
+# OPTION B: Parallel Execution with Absolute Paths (Active Shell Background)
+nohup /root/miniconda/envs/amr_env/bin/parallel -j 4 --joblog progress.log \
+"conda run -n prokka_final prokka \
+--outdir data/processed/prokka_out/{} \
+--prefix {} \
+--genus Klebsiella \
+--species pneumoniae \
+--kingdom Bacteria \
+--cpus 2 --quiet --force \
+data/raw/genomes/{}.fna" \
+:::: data/chunk_4.txt > annotation.log 2>&1 &
+
+
+# ------------------------------------------------------------------------------
+# STEP 7: REALTIME PIPELINE MONITORING & PROGRESS AUDITING
+# ------------------------------------------------------------------------------
+# Track annotation completion progress, speeds, and error states dynamically
+
+# Display system execution tails
+tail -f annotation.log
+tail -f progress.log
+
+# Compute total progression metrics
+done=$(grep -c "Exitval 0" progress.log)
+total=$(wc -l < data/available_genome_ids.txt)
+remaining=$((total - done))
+
+echo "------------------------------"
+echo "Status: Annotation in Progress"
+echo "Done:      $done"
+echo "Remaining: $remaining"
+echo "Total:     $total"
+echo "Progress:  $((done * 100 / total))%"
+echo "------------------------------"
+
+# Real-time CLI tracking ticker (runs every 10 seconds)
+watch -n 10 "tail -n 1 progress.log | awk '{print \"Last Genome ID: \" \$NF}'; done=\$(grep -c '^' progress.log); total=\$(wc -l < data/raw/chunk_4.txt); echo \"Progress: \$((done - 1)) / \$total genomes completed.\""
+
+
+# ------------------------------------------------------------------------------
+# STEP 8: PIPELINE RESUME & TERMINATION CONTROLS
+# ------------------------------------------------------------------------------
+# Gracefully recover or hard-reset parallel annotation engines
+
+# Resume a partially halted GNU Parallel run (chunk 8 example)
+nohup /root/miniconda/envs/amr_env/bin/parallel --resume --joblog progress.log -j 4 \
+"conda run -n prokka_final prokka \
+--outdir data/processed/prokka_out/{} \
+--prefix {} \
+--genus Klebsiella \
+--species pneumoniae \
+--kingdom Bacteria \
+--cpus 2 --quiet --force \
+data/raw/genomes/{}.fna" \
+:::: data/chunk_8.txt > annotation.log 2>&1 &
+
+# Verify total output structures compiled
+ls -1 data/processed/prokka_out | wc -l
+
+# Hard-kill executing pipelines
+pkill -9 parallel && pkill -9 prokka && pkill -9 blastp && pkill -9 hmmer
+pkill -9 -f parallel
+pkill -9 -f prokka
+pkill -9 -f blastp
+
+
+# ------------------------------------------------------------------------------
+# STEP 9: DATA EXPORTATION & MULTI-CLOUD SYNCHRONIZATION
+# ------------------------------------------------------------------------------
+# Archive final Prokka output folders (.gff, .faa, .fna) and deploy a simple
+# HTTP server to transfer outputs to analytical environments (Google Colab, Local, etc.)
+
+# Install system compression tools
+apt update && apt install zip -y
+
+# Compress results using optimized parallel levels
+zip -r -1 data_prokka_2.zip data/processed/prokka_out
+zip -r -0 data_prokka_1.zip data/processed/prokka_out
+
+# Start file transfer server
+python3 -m http.server 8000
+
+# Client Side (Google Colab / Remote Machine curl):
+# !wget http://[DROPLET_IP]:8000/data_prokka_5.zip
+
+
+# ------------------------------------------------------------------------------
+# APPENDIX: MANUALLY TRIGGER CHUNKS
+# ------------------------------------------------------------------------------
+# Explicit parallel launcher definitions for custom cluster architectures
+
+# nohup parallel --joblog progress.log -j 3 "conda run -n prokka_final prokka --outdir data/processed/prokka_out/{} --prefix {} --genus Klebsiella --species pneumoniae --kingdom Bacteria --cpus 2 --quiet --force data/raw/genomes/{}.fna" :::: data/raw/chunk_1.txt > annotation.log 2>&1 &
+# nohup parallel --joblog progress.log -j 3 "conda run -n prokka_final prokka --outdir data/processed/prokka_out/{} --prefix {} --genus Klebsiella --species pneumoniae --kingdom Bacteria --cpus 2 --quiet --force data/raw/genomes/{}.fna" :::: data/raw/chunk_2.txt > annotation.log 2>&1 &
+# nohup parallel --joblog progress.log -j 3 "conda run -n prokka_final prokka --outdir data/processed/prokka_out/{} --prefix {} --genus Klebsiella --species pneumoniae --kingdom Bacteria --cpus 2 --quiet --force data/raw/genomes/{}.fna" :::: data/raw/chunk_3.txt > annotation.log 2>&1 &
+# nohup parallel --joblog progress.log -j 3 "conda run -n prokka_final prokka --outdir data/processed/prokka_out/{} --prefix {} --genus Klebsiella --species pneumoniae --kingdom Bacteria --cpus 2 --quiet --force data/raw/genomes/{}.fna" :::: data/raw/chunk_4.txt > annotation.log 2>&1 &
+# nohup parallel --joblog progress.log -j 3 "conda run -n prokka_final prokka --outdir data/processed/prokka_out/{} --prefix {} --genus Klebsiella --species pneumoniae --kingdom Bacteria --cpus 2 --quiet --force data/raw/genomes/{}.fna" :::: data/raw/chunk_5.txt > annotation.log 2>&1 &
+# nohup parallel --joblog progress.log -j 3 "conda run -n prokka_final prokka --outdir data/processed/prokka_out/{} --prefix {} --genus Klebsiella --species pneumoniae --kingdom Bacteria --cpus 2 --quiet --force data/raw/genomes/{}.fna" :::: data/raw/chunk_6.txt > annotation.log 2>&1 &
+# nohup parallel --joblog progress.log -j 3 "conda run -n prokka_final prokka --outdir data/processed/prokka_out/{} --prefix {} --genus Klebsiella --species pneumoniae --kingdom Bacteria --cpus 2 --quiet --force data/raw/genomes/{}.fna" :::: data/raw/chunk_7.txt > annotation.log 2>&1 &
+# nohup parallel --joblog progress.log -j 3 "conda run -n prokka_final prokka --outdir data/processed/prokka_out/{} --prefix {} --genus Klebsiella --species pneumoniae --kingdom Bacteria --cpus 2 --quiet --force data/raw/genomes/{}.fna" :::: data/raw/chunk_8.txt > annotation.log 2>&1 &

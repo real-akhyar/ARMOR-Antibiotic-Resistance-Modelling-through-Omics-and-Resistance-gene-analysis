@@ -1,0 +1,204 @@
+# ==============================================================================
+# BIOINFORMATICS PIPELINE PROTOCOL: PANGENOME MATRIX GENERATION VIA PANAROO
+# ==============================================================================
+# Framework: Panaroo (Rapid Pangenome Analysis with Graph Corrections)
+# Target Species: Klebsiella pneumoniae (NCBI Taxon 573)
+# Purpose: Accessory gene presence/absence matrix & core-genome alignment extraction
+# Developed by: Akhyar Ahmad (AMR ML Infrastructure Group, UET Lahore)
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# STEP 1: ESTABLISH REMOTE SESSION & SETUP CONDA MANAGER
+# ------------------------------------------------------------------------------
+# Log into your remote high-memory computing instance and initialize miniconda.
+
+# SSH into the high-performance computation instance
+ssh -i ~/.ssh/panaroo-key.pem ubuntu@ip
+
+# Download and install Miniconda3
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+bash Miniconda3-latest-Linux-x86_64.sh -b -p $HOME/miniconda
+
+# Configure terminal environment paths
+export PATH="$HOME/miniconda/bin:$PATH"
+source "$(conda info --base)/etc/profile.d/conda.sh"
+
+
+# ------------------------------------------------------------------------------
+# STEP 2: BUILD ISOLATED CONDA ENVIRONMENT
+# ------------------------------------------------------------------------------
+# Assemble the panaroo and mafft environments with strict python constraints.
+
+conda create -n panaroo_env python=3.10 biopython=1.80 panaroo mafft -c conda-forge -c bioconda -y
+conda activate panaroo_env
+
+# Install file downloading utility
+pip install gdown
+
+
+# ------------------------------------------------------------------------------
+# STEP 3: DATA PREPARATION & FOLDER STRUCTURE
+# ------------------------------------------------------------------------------
+# Pull all raw chunked annotation archives, unzip them, and flatten folder structures.
+
+# Prepare processing directories
+mkdir -p data/processed/prokka_out
+
+# Download remote annotation packages (Add your specific Google Drive download links below)
+gdown "https://drive.google.com/....=sharing"
+gdown "https://drive.google.com/....=sharing"
+# +6 more gdown links
+
+# Verify archives downloaded successfully
+ls -1 *.zip | wc -l
+ls -lh *.zip
+
+# Extract GFF annotation files to the working directory
+unzip '*.zip' -d data/processed/prokka_out/
+
+# Free up local disk space
+rm *.zip
+echo "Deleted original zips to free up 140GB."
+
+# Flatten directory: Copy all GFF files to a unified input folder
+mkdir -p data/processed/panaroo_input
+find data/processed/prokka_out -name "*.gff" -exec cp {} data/processed/panaroo_input/ \;
+
+# Verify final flattened GFF count
+ls -1 data/processed/panaroo_input/*.gff | wc -l
+
+# Purge redundant raw files to preserve server storage
+rm -rf data/processed/prokka_out/
+echo "Deleted raw Prokka output to free up space. Only GFFs remain."
+
+
+# ------------------------------------------------------------------------------
+# STEP 4: AGGRESSIVE DATA QUALITY CONTROL & CLEANING
+# ------------------------------------------------------------------------------
+# Eliminate corrupted annotations, malformed tables, and genomic outliers to protect
+# downstream model accuracies.
+
+echo "Starting aggressive data cleaning..."
+
+# 1. Purge completely empty files
+find data/processed/panaroo_input -name "*.gff" -size 0 -delete
+
+# 2. Purge GFF files lacking valid tabular/column formatting
+find data/processed/panaroo_input -name "*.gff" | xargs -I {} bash -c "grep -q $'\t' {} || echo {}" > empty_gffs.txt
+if [ -s empty_gffs.txt ]; then 
+    cat empty_gffs.txt | xargs rm
+fi
+
+# 3. Fast CDS Outlier Removal (Ensures genome lengths/coding sequences align with standard limits)
+for gff in data/processed/panaroo_input/*.gff; do
+    # Count the number of CDS annotations inside the GFF file
+    count=$(grep -c -P '\tCDS\t' "$gff")
+    
+    # Standard Klebsiella pneumoniae bounds are set between 4500 and 6500 genes
+    if [ "$count" -lt 4500 ] || [ "$count" -gt 6500 ]; then
+        echo "Removing outlier: $(basename "$gff") (CDS Count: $count)"
+        rm "$gff"
+    fi
+done
+
+# Final check validation
+VALID_COUNT=$(ls -1 data/processed/panaroo_input/*.gff | wc -l)
+echo "Cleaning complete. $VALID_COUNT high-quality genomes ready for Panaroo."
+
+
+# ------------------------------------------------------------------------------
+# STEP 5: AUTOMATED DEPLOYMENT SCRIPT DEFINITION
+# ------------------------------------------------------------------------------
+# Create the automated execution script to launch Panaroo on large AWS nodes.
+
+cat << 'EOF' > run_panaroo.sh
+#!/bin/bash
+
+# 1. Ensure conda paths are available
+export PATH="$HOME/miniconda/bin:$PATH"
+source "$(conda info --base)/etc/profile.d/conda.sh"
+
+# 2. Activate the freshly built environment
+conda activate panaroo_env
+
+# 3. Define paths 
+INPUT_DIR="data/processed/panaroo_input"
+OUT_DIR="data/processed/panaroo_out"
+LOG_DIR="logs"
+
+# Ensure temp files write to the large SSD
+export TMPDIR="$PWD/data/tmp"
+mkdir -p "$OUT_DIR" "$LOG_DIR" "$TMPDIR"
+
+# 4. DATA CLEANING: Purge bad files BEFORE running Panaroo
+echo "Cleaning malformed and empty GFF files..."
+find "$INPUT_DIR" -name "*.gff" -size 0 -delete
+find "$INPUT_DIR" -name "*.gff" | xargs -I {} bash -c "grep -q $'\t' {} || echo {}" > empty_gffs.txt
+if [ -s empty_gffs.txt ]; then
+    cat empty_gffs.txt | xargs rm
+    echo "Removed $(wc -l < empty_gffs.txt) malformed GFF files."
+else
+    echo "No malformed GFF files found."
+fi
+
+# 5. Input Verification
+GFF_COUNT=$(ls -1 "$INPUT_DIR"/*.gff 2>/dev/null | wc -l)
+echo "Found $GFF_COUNT clean GFF files. Starting Panaroo on AWS r5.8xlarge (32 Cores)..."
+
+# 6. Execute Panaroo (Detached parallel run)
+nohup panaroo \
+    -i "$INPUT_DIR"/*.gff \
+    -o "$OUT_DIR" \
+    --clean-mode strict \
+    --alignment core \
+    --aligner mafft \
+    --core_threshold 0.95 \
+    --len_dif_percent 0.95 \
+    -c 0.98 \
+    -t 32 \
+    > "$LOG_DIR/panaroo_run.log" 2>&1 & disown
+
+echo "Process detached. Run 'tail -f $LOG_DIR/panaroo_run.log' to monitor."
+EOF
+
+
+# ------------------------------------------------------------------------------
+# STEP 6: EXECUTION & MONITORING CONTROLS
+# ------------------------------------------------------------------------------
+# Run and manage the active pangenome calculation processes.
+
+# Authorize and trigger the execution wrapper
+chmod +x run_panaroo.sh
+./run_panaroo.sh
+
+# Monitor log updates and system processor loads
+tail -f logs/panaroo_run.log
+htop
+
+# Emergency Halt Option
+# pkill -f panaroo
+
+
+# ------------------------------------------------------------------------------
+# STEP 7: RESULTS EXPORTATION & TRANSFER PROTOCOL
+# ------------------------------------------------------------------------------
+# Consolidate core alignments and gene matrices into highly optimized bundles
+
+# Navigate to the output directory
+cd data/processed/panaroo_out/
+cp ~/logs/panaroo_run.log ./full_process_history.log
+
+# Compress all critical output models (graph files, statistics, and matrices)
+zip -r full_pangenome_results.zip \
+    gene_presence_absence.csv \
+    core_gene_alignment_filtered.aln \
+    final_graph.gml \
+    summary_statistics.txt \
+    full_process_history.log \
+    struct_presence_absence.Rtab \
+    pan_genome_reference.fa \
+    alignment_entropy.csv \
+    pre_filt_graph.gml
+
+# Launch instant file server to transfer the ZIP archive back to analytical systems
+python3 -m http.server 8000

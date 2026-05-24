@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="AMR.Api/AMR.Api.csproj" />
+  <Project Path="AMR.Training/AMR.Training.csproj" />
+</Solution>

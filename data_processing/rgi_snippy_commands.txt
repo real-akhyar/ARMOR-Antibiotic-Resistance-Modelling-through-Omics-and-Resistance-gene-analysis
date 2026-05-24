@@ -1,0 +1,48 @@
+# ==============================================================================
+# PIPELINE MANAGEMENT & PROCESS CONTROL: RGI & SNIPPY
+# ==============================================================================
+# Purpose: Background execution, process monitoring, and termination signals
+# Developed by: Akhyar Ahmad (AMR ML Infrastructure Group, UET Lahore)
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. PROCESS TERMINATION & RESETS (HARD KILL SIGNALS)
+# ------------------------------------------------------------------------------
+# Safely halt any existing orphan or hung pipelines running on the server.
+
+# Halt executing RGI processes
+pkill -f run_rgi_parallel.py
+pkill -f rgi
+pkill -u ubuntu -f "python3 run_rgi_parallel.py"
+
+# Halt executing Snippy processes
+pkill -u ubuntu -f "run_snippy_parallel.sh"
+pkill -u ubuntu -f "snippy"
+
+# Halt active file processing chains
+pkill -u ubuntu -f "xargs"
+
+
+# ------------------------------------------------------------------------------
+# 2. BACKGROUND PIPELINE EXECUTION
+# ------------------------------------------------------------------------------
+# Launch variant calling and resistome extraction tasks as background processes.
+
+# Start parallel RGI gene detection
+nohup python3 run_rgi_parallel.py > logs/rgi_parallel.log 2>&1 & disown
+
+# Start parallel Snippy chromosomal variant mapping
+chmod +x run_snippy_parallel.sh
+nohup ./run_snippy_parallel.sh > logs/snippy_parallel.log 2>&1 & disown
+
+
+# ------------------------------------------------------------------------------
+# 3. LIVE STREAM MONITORING & LOGGING
+# ------------------------------------------------------------------------------
+# Stream stdout and stderr outputs in real-time.
+
+# Tail RGI outputs
+tail -f logs/rgi_parallel.log
+
+# Tail Snippy outputs
+tail -f logs/snippy_parallel.log
