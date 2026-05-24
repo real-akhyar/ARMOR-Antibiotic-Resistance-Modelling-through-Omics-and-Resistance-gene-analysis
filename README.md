@@ -1,11 +1,11 @@
-# ARMOR: Antimicrobial Resistance Multi-Omic Router
+# ARMOR: Antibiotic Resistance Modelling through Omics and Resistance-gene analysis
 
 [![.NET Core](https://img.shields.io/badge/.NET-9.0-blue.svg)](https://dotnet.microsoft.com/)
 [![ML.NET](https://img.shields.io/badge/ML.NET-3.0-orange.svg)](https://dotnet.microsoft.com/apps/machinelearning-ai/ml-dotnet)
 [![LightGBM](https://img.shields.io/badge/LightGBM-4.0-green.svg)](https://lightgbm.readthedocs.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**ARMOR (Antimicrobial Resistance Multi-Omic Router)** is an enterprise-grade, high-performance machine learning framework built in C# (.NET 9) using ML.NET to predict antibiotic susceptibility profiles in *Klebsiella pneumoniae*. 
+**ARMOR (Antibiotic Resistance Modelling through Omics and Resistance-gene analysis)** is an enterprise-grade, high-performance machine learning framework built in C# (.NET 9) using ML.NET to predict antibiotic susceptibility profiles in *Klebsiella pneumoniae*. 
 
 This repository serves as the official, citable implementation of the ARMOR engine. By combining population-wide pangenome presence/absence matrices, resistance gene database (CARD) allelic identity thresholds, targeted AMR protein 3-mer profiles, and chromosomal SNP/indel disruption maps, ARMOR resolves complex epistatic mechanisms to achieve new state-of-the-art (SOTA) boundaries on critical antibiotics.
 
@@ -164,7 +164,7 @@ The preprocessing pipeline relies on standard bioinformatics frameworks. Complet
 If you reference the ARMOR multi-omic feature extraction scheme, its C# training infrastructure, or its published benchmarks, please formally cite this repository:
 
 ```text
-Ahmad, A. (2025). ARMOR: Antimicrobial Resistance Multi-Omic Router Framework using High-Dimensional Pangenomics and Type-Safe ML.NET LightGBM Tree Architectures. Graduate Research Infrastructure Project, UET Lahore. DOI: 10.5281/zenodo.xxxxxxx (Pending Archive Snap)
+Akhyar, A. (2026). ARMOR: Antibiotic Resistance Modelling through Omics and Resistance-gene analysis using High-Dimensional Pangenomics and Type-Safe ML.NET LightGBM Tree Architectures. Graduate Research Infrastructure Project, UET Lahore. DOI: 10.5281/zenodo.xxxxxxx (Pending Archive Snap)
 ```
 
 > **Developed by Akhyar Ahmad**  
