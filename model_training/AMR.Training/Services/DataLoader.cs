@@ -31,14 +31,13 @@ namespace AMR.Training.Services
             using var reader = new StreamReader(path);
             using var csv    = new CsvReader(reader, config);
 
-            
             csv.Read();
             csv.ReadHeader();
             var allHeaders = csv.HeaderRecord!;
 
-            
+        
             string[] featureNames = allHeaders.Skip(1).ToArray();
-            Console.WriteLine($"Features: {featureNames.Length:N0}");
+            Console.WriteLine($"Features count: {featureNames.Length:N0}");
 
             var genomeIds = new List<string>();
             var rows      = new List<float[]>();
@@ -50,20 +49,19 @@ namespace AMR.Training.Services
                 genomeIds.Add(id);
 
                 var row = new float[featureNames.Length];
-                for (int i = 0; i < featureNames.Length; i++)
+                for (int j = 0; j < featureNames.Length; j++)
                 {
-                    row[i] = csv.GetField<float>(i + 1);
+                    row[j] = csv.GetField<float>(j + 1);
                 }
                 rows.Add(row);
             }
 
-            Console.WriteLine($"Genomes loaded: {genomeIds.Count:N0}");
-
-            
-            var X = new float[rows.Count, featureNames.Length];
-            for (int i = 0; i < rows.Count; i++)
+            int n = rows.Count;
+            int nf = featureNames.Length;
+            var X = new float[n, nf];
+            for (int i = 0; i < n; i++)
             {
-                for (int j = 0; j < featureNames.Length; j++)
+                for (int j = 0; j < nf; j++)
                 {
                     X[i, j] = rows[i][j];
                 }
@@ -72,11 +70,11 @@ namespace AMR.Training.Services
             return (X, genomeIds.ToArray(), featureNames);
         }
 
-
-        public Dictionary<string, Dictionary<string, float?>> LoadLabels()
+        
+        public Dictionary<string, Dictionary<string, float?>> LoadLabels(out Dictionary<string, string> genomeToBioProject)
         {
-            var path = Path.Combine(_featuresDir, "Y_labels_aligned.csv");
-            Console.WriteLine($"Loading labels from: {path}");
+            var path = Path.Combine(_featuresDir, "Y_labels_with_bioproject_2.csv");
+            Console.WriteLine($"Loading multi-omic targets and study layouts from: {path}");
 
             var config = new CsvConfiguration(CultureInfo.InvariantCulture)
             {
@@ -88,13 +86,14 @@ namespace AMR.Training.Services
 
             csv.Read();
             csv.ReadHeader();
-            var headers     = csv.HeaderRecord!;
-            var antibiotics = headers.Skip(1).ToArray(); 
+            var allHeaders = csv.HeaderRecord!;
 
-            
-            Console.WriteLine("--> Raw antibiotic column headers found in your CSV: " + string.Join(", ", antibiotics));
+        
+            string[] antibiotics = allHeaders.Skip(2).ToArray(); 
+            Console.WriteLine("--> Antibiotic columns registered: " + string.Join(", ", antibiotics));
 
-            
+            genomeToBioProject = new Dictionary<string, string>();
+
             var result = antibiotics.ToDictionary(
                 ab => ab.Trim().ToLower(),
                 _ => new Dictionary<string, float?>()
@@ -103,13 +102,17 @@ namespace AMR.Training.Services
             while (csv.Read())
             {
                 string genomeId = csv.GetField<string>(0)!;
+                string bioProject = csv.GetField<string>(1)!;
+                
                 if (string.IsNullOrEmpty(genomeId)) continue;
+
+                
+                genomeToBioProject[genomeId] = bioProject;
 
                 for (int i = 0; i < antibiotics.Length; i++)
                 {
-                    string rawKey = antibiotics[i];
-                    string standardizedKey = rawKey.Trim().ToLower();
-                    string rawVal = csv.GetField<string>(i + 1)!;
+                    string standardizedKey = antibiotics[i].Trim().ToLower();
+                    string rawVal = csv.GetField<string>(i + 2)!;
 
                     if (string.IsNullOrEmpty(rawVal) || 
                         rawVal.Equals("nan", StringComparison.OrdinalIgnoreCase) || 
@@ -134,7 +137,7 @@ namespace AMR.Training.Services
             return result;
         }
 
-
+        
         public (float[,] X, float[] y, string[] GenomeIds) FilterForAntibiotic(
             float[,] X,
             string[] allGenomeIds,

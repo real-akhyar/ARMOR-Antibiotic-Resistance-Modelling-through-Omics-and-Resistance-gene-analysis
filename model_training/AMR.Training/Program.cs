@@ -35,36 +35,32 @@ namespace AMR.Training
             Console.WriteLine("Loading multi-omic integrated feature matrix...");
             var (X, genomeIds, featureNames) = loader.LoadFeatures();
 
+            Console.WriteLine("Loading phenotype target labels and BioProject study layouts...");
+            Dictionary<string, string> genomeToBioProject;
+            var allLabels = loader.LoadLabels(out genomeToBioProject);
 
-            // CRITICAL DIAGNOSTIC: CLONAL INFLATION / LEAKAGE AUDIT ENGINE
-            
-            Console.WriteLine("\n[AUDIT] Evaluating genome ID prefix distributions...");
-            var prefixGroups = genomeIds
-                .GroupBy(id => id.Contains('.') ? id.Split('.')[0] : "Unknown")
+            Console.WriteLine("\n[AUDIT] Evaluating independent BioProject cohort distribution...");
+            var studyGroups = genomeIds
+                .Select(id => genomeToBioProject.TryGetValue(id, out string? bp) ? bp : "Unknown") // 👈 Changed 'string' to 'string?'
+                .GroupBy(bp => bp)
                 .OrderByDescending(g => g.Count())
-                .Take(10)
                 .ToList();
 
-            foreach (var g in prefixGroups)
+            foreach (var g in studyGroups)
             {
                 double percentage = (100.0 * g.Count()) / genomeIds.Length;
-                Console.WriteLine($"  -> Source Prefix {g.Key}: {g.Count()} isolates ({percentage:F1}%)");
+                Console.WriteLine($"  -> BioProject {g.Key,-12}: {g.Count(),4} isolates ({percentage:F1}%)");
             }
             
-            if (prefixGroups.Count > 0 && prefixGroups[0].Key == "573")
-            {
-                Console.WriteLine("[VERDICT] Cohort maps to a unified species container index (NCBI Taxon 573).");
-                Console.WriteLine("          Randomized cross-validation splits are biologically stable.\n");
-            }
-            else
-            {
-                Console.WriteLine("[NOTICE] Mixed taxons or source provider prefixes detected.");
-                Console.WriteLine("         Verify metadata structures to ensure group containment consistency.\n");
-            }
-            
+            var externalStudies = new HashSet<string> { "PRJNA376414", "PRJEB31361", "PRJEB28400", "PRJEB6574" };
+            int totalValidationSamples = studyGroups.Where(g => externalStudies.Contains(g.Key)).Sum(g => g.Count());
+            int totalTrainingSamples = genomeIds.Length - totalValidationSamples;
 
-            Console.WriteLine("Loading phenotype target labels...");
-            var allLabels = loader.LoadLabels();
+            Console.WriteLine("\n============================================================");
+            Console.WriteLine($"  PRODUCTION INDEPENDENT DATA SPLIT METRICS:");
+            Console.WriteLine($"  • Total Independent Training Pool:       {totalTrainingSamples} isolates");
+            Console.WriteLine($"  • Total Clean External Validation Cohort: {totalValidationSamples} isolates");
+            Console.WriteLine("============================================================\n");
 
             var trainer = new Trainer(modelsDir, featuresDir);
             var evaluator = new Evaluator();
@@ -82,7 +78,6 @@ namespace AMR.Training
             {
                 string standardTarget = ab.Trim().ToLower();
 
-                
                 string? matchedKey = allLabels.Keys.FirstOrDefault(k => 
                     k == standardTarget || 
                     k == standardTarget.Replace("/", "_") || 
@@ -90,7 +85,7 @@ namespace AMR.Training
 
                 if (string.IsNullOrEmpty(matchedKey))
                 {
-                    Console.WriteLine($"WARNING: No labels found matching target token allocation: '{ab}'. Skipping.");
+                    Console.WriteLine($"WARNING: No labels found matching target allocation: '{ab}'. Skipping.");
                     continue;
                 }
 
@@ -98,20 +93,19 @@ namespace AMR.Training
 
                 if (y_filtered.Length < 50)
                 {
-                    Console.WriteLine($"SKIP — {ab}: Insufficient labeled historical records ({y_filtered.Length} total).");
+                    Console.WriteLine($"SKIP — {ab}: Insufficient labeled records ({y_filtered.Length} total).");
                     continue;
                 }
 
-                // Launch cross-validation routines
-                var result = trainer.TrainAndEvaluate(ab, X_filtered, y_filtered, featureNames, ids_filtered);
+                var result = trainer.TrainAndEvaluate(ab, X_filtered, y_filtered, featureNames, ids_filtered, genomeToBioProject);
                 results.Add(result);
             }
 
-            // Generate complete final matrix breakdown and scoreboards
+            // Generate complete final evaluation breakdowns and scoreboards
             evaluator.PrintComparisonTable(results, pankaAUC);
             evaluator.SaveResultsCSV(results, Path.Combine(resultsDir, "model_results.csv"));
 
-            Console.WriteLine("\n🎉 Training Pipeline Execution Complete!");
+            Console.WriteLine("\nTraining Pipeline Execution Complete!");
             Console.WriteLine($"Models written to: {modelsDir}");
             Console.WriteLine("ONNX deployment packages generated successfully for the ASP.NET API.");
         }

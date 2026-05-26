@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Microsoft.ML;
@@ -27,50 +28,75 @@ namespace AMR.Training.Services
             float[,] X,
             float[]  y,
             string[] featureNames,
-            string[] genomeIds)
+            string[] genomeIds,
+            Dictionary<string, string> genomeToBioProject)
         {
             int n  = X.GetLength(0);
             int nf = X.GetLength(1);
-            int nPositive = y.Count(v => v > 0.5f);
-            int nNegative = n - nPositive;
 
-            Console.WriteLine("\n" + new string('=', 50));
-            Console.WriteLine($"  ⚡ CONFIGURING PIPELINE FOR: {antibiotic.ToUpper()}");
-            Console.WriteLine($"  Samples: {n} | Resistant: {nPositive} ({100.0 * nPositive / n:F1}%) | Susceptible: {nNegative}");
+            // 1. Identify our strict publication holdout target studies
+            var externalStudies = new HashSet<string> { "PRJNA376414", "PRJEB31361", "PRJEB28400", "PRJEB6574" };
 
-            if (nPositive < 20 || nNegative < 20)
-            {
-                Console.WriteLine("  SKIP — Insufficient minority class samples to securely cross-validate.");
-                return new ModelResult { Antibiotic = antibiotic };
-            }
-
-            var dataRows = Enumerable.Range(0, n).Select(i =>
+            // 2. Build the underlying data rows, tracking metadata internally
+            var allRows = Enumerable.Range(0, n).Select(i =>
             {
                 var feats = new float[nf];
                 for (int j = 0; j < nf; j++) feats[j] = X[i, j];
-                return new FeatureRow
+                
+                string gid = genomeIds[i];
+                string bp = genomeToBioProject.TryGetValue(gid, out var project) ? project : "Unknown";
+
+                return new DetailedRow
                 {
-                    Features = feats,
-                    Label    = y[i] > 0.5f
+                    Features   = feats,
+                    Label      = y[i] > 0.5f,
+                    IsExternal = externalStudies.Contains(bp)
                 };
             }).ToList();
 
+            // 3. Perform a rigorous Study-Level Holdout Split
+            var trainRows = allRows.Where(r => !r.IsExternal).ToList();
+            var testRows  = allRows.Where(r => r.IsExternal).ToList();
+
+            int nTrainPositive = trainRows.Count(r => r.Label);
+            int nTrainNegative = trainRows.Count - nTrainPositive;
+            int nTestPositive  = testRows.Count(r => r.Label);
+            int nTestNegative  = testRows.Count - nTestPositive;
+
+            Console.WriteLine("\n" + new string('=', 65));
+            Console.WriteLine($"  ⚡ STUDY-LEVEL HOLDOUT FOR: {antibiotic.ToUpper()}");
+            Console.WriteLine($"  • Train Pool: {trainRows.Count} (Resistant: {nTrainPositive} | Susceptible: {nTrainNegative})");
+            Console.WriteLine($"  • External Cohort: {testRows.Count} (Resistant: {nTestPositive} | Susceptible: {nTestNegative})");
+            Console.WriteLine(new string('-', 65));
+
+            // Guard rails to protect minority class evaluation boundaries
+            if (nTrainPositive < 10 || nTrainNegative < 10 || nTestPositive == 0 || nTestNegative == 0)
+            {
+                Console.WriteLine("  ⚠️ SKIP — Insufficient samples within minority validation cohorts.");
+                return new ModelResult { Antibiotic = antibiotic };
+            }
+
             var schema = SchemaDefinition.Create(typeof(FeatureRow));
             schema["Features"].ColumnType = new VectorDataViewType(NumberDataViewType.Single, nf);
-            IDataView data = _ml.Data.LoadFromEnumerable(dataRows, schema);
 
-            float scalePosWeight = (float)nNegative / Math.Max(nPositive, 1);
+            var simpleTrainRows = trainRows.Select(r => new FeatureRow { Features = r.Features, Label = r.Label }).ToList();
+            var simpleTestRows  = testRows.Select(r => new FeatureRow { Features = r.Features, Label = r.Label }).ToList();
 
-            
+            IDataView trainData = _ml.Data.LoadFromEnumerable(simpleTrainRows, schema);
+            IDataView testData  = _ml.Data.LoadFromEnumerable(simpleTestRows, schema);
+
+            // Configure balancing weights based strictly on training pool distribution
+            float scalePosWeight = (float)nTrainNegative / Math.Max(nTrainPositive, 1);
+
             var options = new LightGbmBinaryTrainer.Options
             {
-                LabelColumnName             = "Label",
-                FeatureColumnName           = "Features",
-                Verbose                     = false,
-                EvaluationMetric            = LightGbmBinaryTrainer.Options.EvaluateMetricType.AreaUnderCurve,
+                LabelColumnName            = "Label",
+                FeatureColumnName          = "Features",
+                Verbose                    = false,
+                EvaluationMetric           = LightGbmBinaryTrainer.Options.EvaluateMetricType.AreaUnderCurve,
                 WeightOfPositiveExamples   = scalePosWeight,
-                LearningRate                = 0.05,
-                NumberOfLeaves              = 63,
+                LearningRate               = 0.05,
+                NumberOfLeaves             = 63,
                 MinimumExampleCountPerLeaf = 5,
                 NumberOfIterations         = 1000,
                 Booster = new GradientBooster.Options
@@ -83,122 +109,88 @@ namespace AMR.Training.Services
                 }
             };
 
+            // Inject domain-specific hyperparameter adaptations
             string abLower = antibiotic.ToLower().Trim();
-
-            
             if (abLower.Contains("cefepime"))
             {
                 options.NumberOfIterations = 2000;
                 options.LearningRate = 0.03;
                 options.NumberOfLeaves = 127;
                 options.MinimumExampleCountPerLeaf = 10;
-                options.WeightOfPositiveExamples = 1.0f; 
-                options.Booster = new GradientBooster.Options
-                {
-                    FeatureFraction = 0.10, 
-                    SubsampleFraction = 0.75,
-                    L1Regularization = 0.05,
-                    L2Regularization = 1.0 
-                };
+                options.WeightOfPositiveExamples = 1.0f;
+                options.Booster = new GradientBooster.Options { FeatureFraction = 0.10, SubsampleFraction = 0.75, L1Regularization = 0.05, L2Regularization = 1.0 };
             }
             else if (abLower.Contains("fosfomycin"))
             {
-            
-                options.NumberOfIterations = 300; 
-                options.LearningRate = 0.01; 
-                options.NumberOfLeaves = 15;  
+                options.NumberOfIterations = 300;
+                options.LearningRate = 0.01;
+                options.NumberOfLeaves = 15;
                 options.MinimumExampleCountPerLeaf = 8;
                 options.WeightOfPositiveExamples = 2.5f;
-                options.Booster = new GradientBooster.Options
-                {
-                    FeatureFraction = 0.20,
-                    SubsampleFraction = 0.60, 
-                    L1Regularization = 1.0,  
-                    L2Regularization = 5.0   
-                };
+                options.Booster = new GradientBooster.Options { FeatureFraction = 0.20, SubsampleFraction = 0.60, L1Regularization = 1.0, L2Regularization = 5.0 };
             }
             else if (abLower.Contains("piperacillin") || abLower.Contains("tazobactam"))
             {
-                options.Booster = new GradientBooster.Options
-                {
-                    FeatureFraction = 0.12, 
-                    SubsampleFraction = 0.80,
-                    SubsampleFrequency = 5,
-                    L1Regularization = 0.1,
-                    L2Regularization = 1.0 
-                };
+                options.Booster = new GradientBooster.Options { FeatureFraction = 0.12, SubsampleFraction = 0.80, SubsampleFrequency = 5, L1Regularization = 0.1, L2Regularization = 1.0 };
             }
             else if (abLower.Contains("amikacin"))
             {
-                
                 options.NumberOfIterations = 1500;
                 options.LearningRate = 0.04;
                 options.NumberOfLeaves = 63;
                 options.MinimumExampleCountPerLeaf = 8;
-                options.Booster = new GradientBooster.Options
-                {
-                    FeatureFraction = 0.15,
-                    SubsampleFraction = 0.80,
-                    SubsampleFrequency = 5,
-                    L1Regularization = 0.2,
-                    L2Regularization = 0.5
-                };
+                options.Booster = new GradientBooster.Options { FeatureFraction = 0.15, SubsampleFraction = 0.80, SubsampleFrequency = 5, L1Regularization = 0.2, L2Regularization = 0.5 };
             }
 
             var pipeline = _ml.BinaryClassification.Trainers.LightGbm(options);
 
-            int nFolds = n < 400 ? 10 : 5;
-            Console.WriteLine($"  Running {nFolds}-Fold Stratified Cross-Validation loop...");
+            Console.WriteLine("  Training binary classifier exclusively on baseline studies...");
+            var trainedModel = pipeline.Fit(trainData);
 
-            var cvResults = _ml.BinaryClassification.CrossValidate(
-                data, pipeline, numberOfFolds: nFolds, labelColumnName: "Label");
-
-            
-            double meanAUC   = cvResults.Average(r => r.Metrics.AreaUnderRocCurve);
-            double meanAUPRC = cvResults.Average(r => r.Metrics.AreaUnderPrecisionRecallCurve);
-            double meanF1    = cvResults.Average(r => r.Metrics.F1Score);
-            double meanAcc   = cvResults.Average(r => r.Metrics.Accuracy);
-            double meanSens  = cvResults.Average(r => r.Metrics.PositiveRecall);      
-            double meanSpec  = cvResults.Average(r => r.Metrics.NegativeRecall);      
-            double meanPrec  = cvResults.Average(r => r.Metrics.PositivePrecision);   
+            Console.WriteLine("  Evaluating model against independent external validation cohort...");
+            var predictions = trainedModel.Transform(testData);
+            var metrics     = _ml.BinaryClassification.Evaluate(predictions, labelColumnName: "Label");
 
             
-            var aucValues = cvResults.Select(r => r.Metrics.AreaUnderRocCurve).ToArray();
-            double aucVariance = aucValues.Select(v => Math.Pow(v - meanAUC, 2)).Average();
-            double aucStd = Math.Sqrt(aucVariance);
-            double ci95 = 1.96 * aucStd / Math.Sqrt(nFolds);
+            // HANLEY-MCNEIL 95% CONFIDENCE INTERVALS
+            
+            double auc = metrics.AreaUnderRocCurve;
+            double q1  = auc / (2.0 - auc);
+            double q2  = (2.0 * auc * auc) / (1.0 + auc);
+            
+            double num = (auc * (1.0 - auc)) + (nTestPositive - 1) * (q1 - auc * auc) + (nTestNegative - 1) * (q2 - auc * auc);
+            double den = (double)nTestPositive * nTestNegative;
+            
+            double se   = Math.Sqrt(Math.Max(0, num / den));
+            double ci95 = 1.96 * se;
 
-            double ciLow = meanAUC - ci95;
-            double ciHigh = meanAUC + ci95;
+            double ciLow  = Math.Max(0.0, auc - ci95);
+            double ciHigh = Math.Min(1.0, auc + ci95);
 
-            Console.WriteLine($"  AUC:   {meanAUC:F4} (95% CI: {ciLow:F4} - {ciHigh:F4}) | AUPRC: {meanAUPRC:F4}");
-            Console.WriteLine($"  F1:    {meanF1:F4}   Acc:   {meanAcc:F4}");
-            Console.WriteLine($"  Sens:  {meanSens:F4}   Spec:  {meanSpec:F4}   Prec: {meanPrec:F4}");
+            Console.WriteLine($"  ✨ Holdout AUC: {auc:F4} (95% CI: [{ciLow:F4}, {ciHigh:F4}]) | AUPRC: {metrics.AreaUnderPrecisionRecallCurve:F4}");
+            Console.WriteLine($"  ✨ F1-Score:    {metrics.F1Score:F4} | Accuracy: {metrics.Accuracy:F4}");
 
-            Console.WriteLine("  Training final model on full dataset matrix...");
-            var fullModel = pipeline.Fit(data);
-
+            
             string abSafe = antibiotic.Replace("/", "_").Replace(" ", "_");
             string modelPath = Path.Combine(_modelsDir, $"{abSafe}.zip");
-            _ml.Model.Save(fullModel, data.Schema, modelPath);
-            Console.WriteLine($"  Saved binary model: {modelPath}");
-
-            ExportToOnnx(fullModel, data, abSafe);
+            _ml.Model.Save(trainedModel, trainData.Schema, modelPath);
+            
+            ExportToOnnx(trainedModel, trainData, abSafe);
 
             return new ModelResult
             {
                 Antibiotic     = antibiotic,
-                AUC            = meanAUC,
+                AUC            = auc,
                 AUC_CI95_Low   = ciLow,
                 AUC_CI95_High  = ciHigh,
-                AUPRC          = meanAUPRC,
-                F1             = meanF1,
-                Accuracy       = meanAcc,
-                Sensitivity    = meanSens,
-                Specificity    = meanSpec,
-                Precision      = meanPrec,
-                NSamples       = n,
-                ResistanceRate = (double)nPositive / n,
+                AUPRC          = metrics.AreaUnderPrecisionRecallCurve,
+                F1             = metrics.F1Score,
+                Accuracy       = metrics.Accuracy,
+                Sensitivity    = metrics.PositiveRecall,
+                Specificity    = metrics.NegativeRecall,
+                Precision      = metrics.PositivePrecision,
+                NSamples       = testRows.Count,
+                ResistanceRate = (double)nTestPositive / testRows.Count,
             };
         }
 
@@ -209,12 +201,18 @@ namespace AMR.Training.Services
                 string onnxPath = Path.Combine(_modelsDir, $"{abSafe}.onnx");
                 using var stream = File.Create(onnxPath);
                 _ml.Model.ConvertToOnnx(model, data, stream);
-                Console.WriteLine($"  Exported ONNX inference model: {onnxPath}");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"  ONNX export warning: {ex.Message}");
             }
+        }
+
+        private class DetailedRow
+        {
+            public float[] Features { get; set; } = Array.Empty<float>();
+            public bool Label { get; set; }
+            public bool IsExternal { get; set; }
         }
 
         private class FeatureRow
