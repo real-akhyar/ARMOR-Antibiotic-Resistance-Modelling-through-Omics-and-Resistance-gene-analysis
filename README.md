@@ -270,7 +270,8 @@ Setup guides: [Prokka](data_processing/Prokka_setup.txt) |
 
 Feature matrices, phenotype labels, trained models, and ONNX files are archived at:
 
-> Zenodo: [10.5281/zenodo.20369885](https://doi.org/10.5281/zenodo.20369885)
+> Zenodo (v1.0.0) : [10.5281/zenodo.20369885](https://doi.org/10.5281/zenodo.20369885)
+> Zenodo (v1.1.0) : [10.5281/zenodo.20389161](https://doi.org/10.5281/zenodo.20389161)
 
 Raw genome assemblies are available from BV-BRC under NCBI Taxon ID 573.
 Genome IDs are listed in `features/available_genome_ids.txt`.
