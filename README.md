@@ -164,7 +164,7 @@ The preprocessing pipeline relies on standard bioinformatics frameworks. Complet
 If you reference the ARMOR multi-omic feature extraction scheme, its C# training infrastructure, or its published benchmarks, please formally cite this repository:
 
 ```text
-Akhyar, A. (2026). ARMOR: Antibiotic Resistance Modelling through Omics and Resistance-gene analysis using High-Dimensional Pangenomics and Type-Safe ML.NET LightGBM Tree Architectures. Graduate Research Infrastructure Project, UET Lahore. DOI: 10.5281/zenodo.xxxxxxx (Pending Archive Snap)
+Akhyar, A. (2026). ARMOR: Antibiotic Resistance Modelling through Omics and Resistance-gene analysis using High-Dimensional Pangenomics and Type-Safe ML.NET LightGBM Tree Architectures. Graduate Research Infrastructure Project, UET Lahore. DOI: 10.5281/zenodo.20369885 
 ```
 
 > **Developed by Akhyar Ahmad**  
