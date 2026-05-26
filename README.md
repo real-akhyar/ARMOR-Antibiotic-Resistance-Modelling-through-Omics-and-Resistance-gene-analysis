@@ -1,171 +1,310 @@
 # ARMOR: Antibiotic Resistance Modelling through Omics and Resistance-gene analysis
 
-[![.NET Core](https://img.shields.io/badge/.NET-9.0-blue.svg)](https://dotnet.microsoft.com/)
-[![ML.NET](https://img.shields.io/badge/ML.NET-3.0-orange.svg)](https://dotnet.microsoft.com/apps/machinelearning-ai/ml-dotnet)
-[![LightGBM](https://img.shields.io/badge/LightGBM-4.0-green.svg)](https://lightgbm.readthedocs.io/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20369885.svg)](https://doi.org/10.5281/zenodo.20369885)
+[![ORCID](https://img.shields.io/badge/ORCID-0009--0002--3761--3145-brightgreen)](https://orcid.org/0009-0002-3761-3145)
+[![.NET](https://img.shields.io/badge/.NET-9.0-blue)](https://dotnet.microsoft.com/)
+[![ML.NET](https://img.shields.io/badge/ML.NET-3.0-orange)](https://dotnet.microsoft.com/apps/machinelearning-ai/ml-dotnet)
+[![LightGBM](https://img.shields.io/badge/LightGBM-4.0-green)](https://lightgbm.readthedocs.io/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow)](https://opensource.org/licenses/MIT)
 
-**ARMOR (Antibiotic Resistance Modelling through Omics and Resistance-gene analysis)** is an enterprise-grade, high-performance machine learning framework built in C# (.NET 9) using ML.NET to predict antibiotic susceptibility profiles in *Klebsiella pneumoniae*. 
+**ARMOR** is a machine learning framework for predicting antibiotic resistance phenotypes in
+*Klebsiella pneumoniae* from whole-genome sequencing data. It integrates five complementary
+genomic feature layers into a unified 39,876-dimensional feature matrix trained with
+per-antibiotic-tuned LightGBM classifiers.
 
-This repository serves as the official, citable implementation of the ARMOR engine. By combining population-wide pangenome presence/absence matrices, resistance gene database (CARD) allelic identity thresholds, targeted AMR protein 3-mer profiles, and chromosomal SNP/indel disruption maps, ARMOR resolves complex epistatic mechanisms to achieve new state-of-the-art (SOTA) boundaries on critical antibiotics.
-
----
-
-## Key Achievements & State-of-the-Art (SOTA) Claims
-
-ARMOR has been rigorously validated using Stratified Cross-Validation ($k=10$ for Fosfomycin to stabilize low-sample variance; $k=5$ for Cefepime, Amikacin, and Piperacillin/Tazobactam) against all major published baselines:
-
-*   **Piperacillin/Tazobactam (TZP) Victory** `[ARMOR Outperforms Baselines]`  
-    ARMOR achieves an **AUC-ROC of 0.9577** (95% CI: 0.948 – 0.968) and an **F1-Score of 0.9330**, significantly outperforming the **PanKA 2024** baseline (0.8400 AUC / 0.9070 F1), **Spain 2024** clinical cohort (0.8600 AUC / 0.8300 F1), **panpred default** (0.9120 F1), and **panpred LightGBM** (0.9030 F1).  
-    *Biological Rationale:* TZP is a combination beta-lactamase/beta-lactamase-inhibitor drug; resistance is highly non-linear and epistatic, requiring both active enzyme presence (e.g., *bla*<sub>CTX-M</sub>, *bla*<sub>SHV</sub>, *bla*<sub>TEM</sub>) and outer-membrane porin loss (e.g., *ompK35*, *ompK36* frame-shifts). ARMOR's feature space explicitly integrates these high-order genetic combinations, resolving biological interactions that single-omic or simple genomic models completely miss.
-*   **Amikacin (AMK) New Global SOTA** `[ARMOR Outperforms Baselines]`  
-    ARMOR secures a new global baseline of **0.9522 AUC** (95% CI: 0.941 – 0.964), outperforming the **Spain 2024** cohort model (0.9500 AUC) and **PanKA's** hidden supplementary model (0.9150 AUC). Critically, ARMOR maintains an extremely high **specificity of 95.41%** while protecting sensitivity (**81.78%**), correcting the high false-negative rates typical of earlier models.
-*   **Cefepime & Fosfomycin Statistical Parity** `[Stat Tie]`  
-    *   **Cefepime (FEP):** ARMOR converges at parity on F1-Score with PanKA (0.8737 vs. 0.8730), panpred LightGBM (0.8630), and kmerprotein (0.8730). Given the 95% CI window [0.905, 0.923], the $0.007$ AUC difference from PanKA's reported supplementary AUC ($0.9220$) is well within normal sample distribution variance.
-    *   **Fosfomycin (FOF):** ARMOR stabilizes a small-sample population ($n=270$) to post an **0.8158 AUC** (95% CI: 0.763 – 0.869), outperforming Spain 2024 ($0.7800$ AUC) and matching PanKA's supplementary baseline within statistically expected margins.
+ARMOR achieves state-of-the-art performance on piperacillin/tazobactam and amikacin,
+confirmed by both stratified cross-validation and independent BioProject-level holdout
+validation on genomes from studies entirely unseen during training.
 
 ---
 
-## Performance Benchmarking & Baseline Comparisons
+## Version History
 
-### 1. Global Performance Comparison Matrix
+| Version | Validation strategy | Split method | Status |
+|:---|:---|:---|:---|
+| v1.0.0 | 5/10-fold stratified cross-validation | Random row shuffle | Superseded — valid but no study-level separation guaranteed |
+| **v1.1.0** | **BioProject-level holdout** | **Study-level: Unknown BioProject = train, named BioProjects = test** | **Current — independently validated** |
 
-The table below details ARMOR's cross-validated metrics compared directly against values reported in the **PanKA 2024** (iScience) paper, the **Spain 2024** (bioRxiv) clinical cohort, and the **panpred** and **kmerprotein** architectures.
-
-| Target Antibiotic | Model / Framework | AUC-ROC (95% CI) | Macro F1-Score | Sensitivity (Recall) | Specificity | Precision (PPV) | Samples ($n$) |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Piperacillin/Tazobactam (TZP)** | **ARMOR (Ours)** | **0.9577** [0.948, 0.968] | **0.9330** | **0.9329** | **0.8545** | **0.9335** | **1,736** |
-| | panpred (Default) | *N/A* | 0.9120 | *N/A* | *N/A* | *N/A* | ~1,500 |
-| | PanKA 2024 Baseline | 0.8400 [*N/A*] | 0.9070 | *N/A* | *N/A* | *N/A* | ~1,500 |
-| | panpred (LightGBM) | *N/A* | 0.9030 | *N/A* | *N/A* | *N/A* | ~1,500 |
-| | Spain 2024 Cohort | 0.8600 [*N/A*] | 0.8300 | 0.7500 | *N/A* | 0.5700 | 5,907 |
-| **Amikacin (AMK)** | **ARMOR (Ours)** | **0.9522** [0.941, 0.964] | **0.8204** | **0.8178** | **0.9541** | **0.8235** | **2,167** |
-| | Spain 2024 Cohort | 0.9500 [*N/A*] | 0.8300 | 0.4800 | *N/A* | 0.9000 | 5,907 |
-| | PanKA (Supplementary) | 0.9150 [*N/A*] | *N/A* | *N/A* | *N/A* | *N/A* | ~1,800 |
-| **Cefepime (FEP)** | **ARMOR (Ours)** | **0.9143** [0.905, 0.923] | **0.8737** | **0.8953** | **0.7536** | **0.8539** | **1,498** |
-| | PanKA 2024 Baseline | 0.9220 [*N/A*] | 0.8730 | *N/A* | *N/A* | *N/A* | ~1,200 |
-| | kmerprotein Baseline | *N/A* | 0.8730 | *N/A* | *N/A* | *N/A* | ~1,200 |
-| | panpred (LightGBM) | *N/A* | 0.8630 | *N/A* | *N/A* | *N/A* | ~1,200 |
-| **Fosfomycin (FOF)** | **ARMOR (Ours)** | **0.8158** [0.763, 0.869] | **0.6407** | **0.6908** | **0.8109** | **0.6209** | **270** |
-| | PanKA (Supplementary) | 0.8520 [*N/A*] | *N/A* | *N/A* | *N/A* | *N/A* | ~200 |
-| | Spain 2024 Cohort | 0.7800 [*N/A*] | 0.6700 | 0.8300 | *N/A* | 0.8400 | 5,907 |
-
-*\*Note: "N/A" or empty metrics reflect parameters omitted or structurally unrecorded within the respective original publications.*
+**Note on v1.0.0:** The random CV split produced valid, internally consistent metrics
+but did not guarantee that genomes from the same study were confined to one split.
+v1.1.0 corrects this by using BioProject ID as the split boundary.
 
 ---
 
-## Feature Space & Multi-Omic Predictive Layers
+## Results
 
-ARMOR's competitive edge relies on a high-speed, multi-layered feature design mapping structural, genetic, and evolutionary details:
+### v1.1.0 — Independent BioProject Holdout (Current)
 
-```mermaid
-flowchart TD
-    A[Raw Klebsiella pneumoniae Genomes] --> B(Bioinformatics Preprocessing)
-    
-    B --> C1[Pangenome Analysis: Panaroo]
-    B --> C2[Resistome Profiling: CARD RGI]
-    B --> C3[Sub-structural Proteomics]
-    B --> C4[Variant Calling: Snippy]
-    
-    C1 --> D1[Feature Set A: X_pangenome <br> Accessory Gene Presence/Absence]
-    C2 --> D2[Feature Set B: X_rgi <br> CARD Allelic Identity Depths]
-    C3 --> D3[Feature Set C: X_protein_kmers <br> Active Site 3-mer Amino Acid Profile]
-    C4 --> D4[Feature Set D: X_snps <br> Core Chromosomal Disruption Maps]
-    B --> D5[Feature Set E: X_fosfomycin <br> Pathway Transporter & Translesion Co-models]
+Training: 2,182 isolates (`Unknown` BioProject annotation).
+Holdout: 325 isolates from named BioProjects (`PRJNA376414`, `PRJEB31361`,
+`PRJEB28400`, `PRJEB6574`, and 23 others) excluded entirely from training.
 
-    D1 & D2 & D3 & D4 & D5 --> E[Multi-Omic Matrix Integration <br> 39,876 Features]
-    E --> F[NCBI Clonal Guard & Audit System]
-    F --> G[Type-Safe C# ML.NET Training Engine]
-    G --> H[Hyperparameter Optimized LightGBM]
-    H --> I[Production-Ready Interoperable ONNX Models]
+| Antibiotic | ARMOR AUC (95% CI) | AUPRC | F1 | Sensitivity | Specificity | Precision | n (holdout) | Resistance rate |
+|:---|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| **Amikacin** | **0.9865 [0.961, 1.000]** | **0.9300** | **0.8810** | **0.9024** | **0.9764** | **0.8605** | **295** | **13.9%** |
+| **Pip/Tazo** | **0.9395 [0.910, 0.969]** | **0.9595** | **0.8681** | **0.8993** | **0.7526** | **0.8389** | **236** | **58.9%** |
+| **Cefepime** | **0.9075 [0.871, 0.944]** | **0.9453** | **0.8766** | **0.8882** | **0.7500** | **0.8654** | **236** | **64.4%** |
+| Fosfomycin | — | — | — | — | — | — | 0 | — |
+
+Fosfomycin: no held-out BioProject contained genomes with fosfomycin phenotype
+annotations in BV-BRC metadata. This is a data availability limitation.
+Fosfomycin is reported from CV only (v1.0.0, AUC 0.816 [0.763, 0.869]).
+
+### Comparison Against Published Baselines
+
+| Antibiotic | ARMOR v1.1.0 | PanKA 2024 | Spain 2024 | Delta vs PanKA |
+|:---|:---:|:---:|:---:|:---|
+| Amikacin | **0.9865** | 0.9150 | 0.9500 | +0.072, externally confirmed |
+| Pip/Tazo | **0.9395** | 0.8400 | 0.8600 | +0.100, externally confirmed |
+| Cefepime | 0.9075 | 0.9220 | — | -0.015, within 95% CI (statistical tie) |
+| Fosfomycin | 0.8158 (CV only) | 0.8520 | 0.7800 | Within CI, n=270 (statistical tie) |
+
+### Generalization Analysis
+
+| Antibiotic | CV AUC (v1.0.0) | Holdout AUC (v1.1.0) | Delta | Interpretation |
+|:---|:---:|:---:|:---:|:---|
+| Amikacin | 0.9522 | **0.9865** | +0.034 | Improved — conserved resistance determinants |
+| Pip/Tazo | 0.9577 | 0.9395 | -0.018 | Stable generalization |
+| Cefepime | 0.9143 | 0.9075 | -0.007 | Near-identical across splits |
+
+The amikacin model improving on held-out data confirms that learned features —
+primarily CARD allele-level profiles of AAC(6'), APH(3''), and ANT
+aminoglycoside-modifying enzymes — represent conserved resistance determinants
+rather than dataset-specific patterns.
+
+### v1.0.0 — Cross-Validation Results (Reference)
+
+| Antibiotic | AUC (95% CI) | AUPRC | F1 | Sensitivity | Specificity | Precision | n | Folds |
+|:---|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| Pip/Tazo | 0.9577 [0.948, 0.968] | 0.9794 | 0.9330 | 0.9329 | 0.8545 | 0.9335 | 1,736 | 5 |
+| Amikacin | 0.9522 [0.941, 0.964] | 0.8891 | 0.8204 | 0.8178 | 0.9541 | 0.8235 | 2,167 | 5 |
+| Cefepime | 0.9143 [0.905, 0.923] | 0.9410 | 0.8737 | 0.8953 | 0.7536 | 0.8539 | 1,498 | 5 |
+| Fosfomycin | 0.8158 [0.763, 0.869] | 0.7569 | 0.6407 | 0.6908 | 0.8109 | 0.6209 | 270 | 10 |
+
+---
+
+## Feature Architecture
+
+```
+Raw K. pneumoniae assemblies (.fna)
+        |
+        +-- Panaroo              --> Feature Set A: X_pangenome
+        |                             Accessory gene presence/absence
+        |                             0.1% frequency threshold
+        |
+        +-- CARD RGI             --> Feature Set B: X_rgi
+        |                             AMR allele identity >= 90%
+        |                             742 allelic features
+        |
+        +-- RGI orf_prot_sequence --> Feature Set C: X_protein_kmers
+        |                             Amino acid 3-mer frequency profiles
+        |                             7,038 features after presence filter
+        |
+        +-- Snippy + SnpEff      --> Feature Set D: X_snps
+        |   Ref: HS11286 (CP003200)   Locus-tag resolved chromosomal variants
+        |                             ompK36, cyaA, ptsI, glpT, fusA
+        |                             5 features after filtering
+        |
+        +-- RGI + Pangenome      --> Feature Set E: X_fosfomycin
+            + X_snps                  fosA3 (acquired, 0.56%)
+                                      glpT_snp (1.59%)
+                                      2 features
+
+        Total: 39,876 features | 2,507 genomes
 ```
 
-*   **Feature Set A (Pangenomics — $X_{\text{pangenome}}$):** Resolves horizontal gene transfer (HGT) events, plasmid variations, and accessory elements (accessory gene presence/absence matrix).
-*   **Feature Set B (CARD Alleles — $X_{\text{rgi}}$):** Tracks localized, high-confidence resistance gene allelic identity depths using the Comprehensive Antibiotic Resistance Database (CARD).
-*   **Feature Set C (AMR Protein 3-mers — $X_{\text{protein\_kmers}}$):** Focuses on sub-structural modifications within active enzyme sites (using a refined 7,038 feature amino acid profile).
-*   **Feature Set D (Chromosomal Disruption Maps — $X_{\text{snps}}$):** Resolves core chromosomal mutations (e.g., *gyrA*, *parC*, *murA*) and porin-dampening truncations (*ompK35/36* frame-shifts).
-*   **Feature Set E (Fosfomycin Mechanisms — $X_{\text{fosfomycin}}$):** Tracks the specific interplay between plasmid-borne transferases (*fosA* variants) and chromosomal transporter deletions (*glpT/uhpT*).
+**Feature Set A — Pangenome:** Panaroo-derived accessory genome matrix. Gene families
+present in fewer than 0.1% or more than 99.9% of isolates are excluded.
+
+**Feature Set B — RGI Alleles:** CARD allele-level features encoding unique ARO gene
+family and ARO accession combinations. Two-level JSON parser; identity threshold 90%.
+Result: 742 features.
+
+**Feature Set C — AMR Protein 3-mers:** Normalised amino acid trigram frequency profiles
+from `orf_prot_sequence` fields of RGI hits passing identity threshold. Filtered to
+features present in at least 3 isolates (0.1% floor).
+
+**Feature Set D — Chromosomal SNPs:** Snippy variant calls annotated with SnpEff
+against HS11286 (CP003200). Locus-tag-to-gene mapping extracted from the reference
+GenBank file. *ompK35* excluded at 99.8% prevalence (near-constant).
+
+**Feature Set E — Fosfomycin Epistatic Features:** *fosA5* and *fosA6* excluded
+(>99% prevalence, chromosomally intrinsic to *K. pneumoniae*). UhpT RGI hits
+excluded as false positives (homology to E. coli reference, not a resistance
+mutation; confirmed by 99.68% prevalence). Retained: *fosA3* and *glpT_snp*.
 
 ---
 
-## Model Architecture & Training Parameters
+## Validation Integrity
 
-ARMOR utilizes customized, highly-tuned LightGBM Binary Classifiers via ML.NET. Below are the optimal hyperparameters compiled inside the C# training engine:
+### BioProject-Level Split (v1.1.0)
 
-| Hyperparameter | Default / Standard | Cefepime (FEP) | Fosfomycin (FOF) | Piperacillin/Tazobactam (TZP) | Amikacin (AMK) |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **Learning Rate** | 0.05 | 0.03 | 0.01 | 0.05 | 0.04 |
-| **Number of Leaves** | 63 | 127 | 15 | 63 | 63 |
-| **Min. Examples per Leaf** | 5 | 10 | 8 | 5 | 8 |
-| **Number of Iterations** | 1,000 | 2,000 | 300 | 1,000 | 1,500 |
-| **Feature Fraction** | 0.15 | 0.10 | 0.20 | 0.12 | 0.15 |
-| **Subsample Fraction** | 0.80 | 0.75 | 0.60 | 0.80 | 0.80 |
-| **L1 Regularization** | 0.10 | 0.05 | 1.00 | 0.10 | 0.20 |
-| **L2 Regularization** | 0.50 | 1.00 | 5.00 | 1.00 | 0.50 |
-| **Pos. Class Scaling Weight** | $\frac{N_{\text{neg}}}{N_{\text{pos}}}$ | 1.00 (Balanced) | 2.50 | $\frac{N_{\text{neg}}}{N_{\text{pos}}}$ | $\frac{N_{\text{neg}}}{N_{\text{pos}}}$ |
+```
+[AUDIT] BioProject cohort distribution:
+  -> Unknown     : 1,895 isolates (75.6%)  [TRAINING POOL]
+  -> PRJNA376414 :   166 isolates  (6.6%)  [HOLDOUT]
+  -> PRJEB31361  :    74 isolates  (3.0%)  [HOLDOUT]
+  -> PRJEB28400  :    54 isolates  (2.2%)  [HOLDOUT]
+  -> PRJEB6574   :    31 isolates  (1.2%)  [HOLDOUT]
+  -> [23 additional BioProjects]           [HOLDOUT]
 
----
-
-## Clonal Inflation & Leakage Audit
-
-A major risk in bacterial machine learning is **clonal inflation**, where outbreak clones split across training/test folds skew validation metrics. To protect the authenticity of our scores, ARMOR includes an automatic **NCBI Taxon Guard Prefix Check** prior to compiling features:
-
-```text
-[AUDIT] Evaluating genome ID prefix distributions...
-  -> Source Prefix 573:   2,384 isolates (95.1%)
-  -> Source Prefix 72407:   121 isolates (4.8%)
-  -> Source Prefix 574:       2 isolates (0.1%)
-[VERDICT] Cohort maps to a unified species container index (NCBI Taxon 573).
-          Randomized cross-validation splits are biologically stable.
+  Total training pool:       2,182 isolates
+  Total independent holdout:   325 isolates
 ```
 
-Since 95.1% of the isolates map to the universal species container index (NCBI Taxon ID 573 for *K. pneumoniae*), the data splits remain generalizable, confirming the model's clinical validity and preventing misleadingly inflated accuracies caused by lineage leakages.
+### Known Limitations
+
+- **Fosfomycin external validation absent.** No held-out BioProject contained
+  fosfomycin phenotype data. CV-only AUC (0.816, n=270) has wide CI (±0.053).
+- **Training data confined to BV-BRC.** Performance on hospital collections with
+  different sequencing protocols has not been assessed.
+- **Binary classification only.** R/S phenotype from BV-BRC breakpoint-derived
+  labels. MIC regression is out of scope.
+- **Reference genome dependency.** SNP features require alignment to HS11286.
+- **EarlyStoppingRound inactive in ML.NET CrossValidate.** Fosfomycin iterations
+  hard-capped at 300 to compensate.
 
 ---
 
-## Repository Quickstart & Training Execution
+## Hyperparameters
 
-This repository acts as a code-only reference to instantly establish intellectual ownership. To compile and run the LightGBM cross-validation loops locally on your machine, follow these steps:
+| Parameter | Default | Cefepime | Fosfomycin | Pip/Tazo | Amikacin |
+|:---|:---:|:---:|:---:|:---:|:---:|
+| Learning rate | 0.05 | 0.03 | 0.01 | 0.05 | 0.04 |
+| Number of leaves | 63 | 127 | 15 | 63 | 63 |
+| Min. examples per leaf | 5 | 10 | 8 | 5 | 8 |
+| Iterations | 1,000 | 2,000 | 300 | 1,000 | 1,500 |
+| Feature fraction | 0.15 | 0.10 | 0.20 | 0.12 | 0.15 |
+| Subsample fraction | 0.80 | 0.75 | 0.60 | 0.80 | 0.80 |
+| L1 regularization | 0.10 | 0.05 | 1.00 | 0.10 | 0.20 |
+| L2 regularization | 0.50 | 1.00 | 5.00 | 1.00 | 0.50 |
+| Pos. class weight | N_neg/N_pos | 1.00 | 2.50 | N_neg/N_pos | N_neg/N_pos |
+| CV folds | 5 | 5 | 10 | 5 | 5 |
 
-### 1. Prerequisites
-*   [.NET SDK 9.0](https://dotnet.microsoft.com/download/dotnet/9.0)
-*   Python 3.10+ (For chart plotting and preprocessing)
+---
 
-### 2. Clone and Setup Project Folder
+## Repository Structure
+
+```
+ARMOR-By-Akhyar/
+├── AMR.Training/
+│   ├── Services/
+│   │   ├── DataLoader.cs             # CSV ingestion, BioProject split logic
+│   │   ├── Trainer.cs                # Per-antibiotic LightGBM, CV and holdout
+│   │   └── Evaluator.cs              # Metrics output and CSV export
+│   ├── Models/
+│   │   └── ModelResult.cs
+│   └── Program.cs
+├── data_processing/
+│   ├── Prokka_setup.txt
+│   ├── Panaroo_setup.txt
+│   └── Snippy_setup.txt
+├── features/                         # Full data files on Zenodo
+│   ├── X_combined.csv                # 39,876-feature matrix (2,507 genomes)
+│   ├── Y_labels_aligned.csv          # R/S labels (v1.0.0)
+│   └── Y_labels_with_bioproject.csv  # Labels with BioProject IDs (v1.1.0)
+├── models/
+│   ├── amikacin.onnx
+│   ├── cefepime.onnx
+│   ├── piperacillin_tazobactam.onnx
+│   └── fosfomycin.onnx
+└── results/
+    ├── model_results_v1.0.csv
+    └── model_results_v1.1.csv
+```
+
+---
+
+## Quickstart
+
+### Prerequisites
+
+- .NET SDK 9.0
+- Python 3.10+ (feature extraction)
+
+### Training
+
 ```bash
-git clone https://github.com/your-username/armor-amr.git
-cd armor-amr
-```
-
-### 3. Compile and Run the C# Engine
-```bash
-cd model_training/AMR.Training
+git clone https://github.com/real-akhyar/ARMOR-By-Akhyar.git
+cd ARMOR-By-Akhyar/AMR.Training
 dotnet restore
-dotnet clean
 dotnet run --project .
 ```
 
-The C# engine will automatically parse your feature matrices, output the tabular comparison matrices directly to your console, and export interoperable `.onnx` model files ready for production API microservices.
+### Inference with ONNX
 
----
+```python
+import onnxruntime as rt
+import numpy as np
+import pandas as pd
 
-## Bioinformatics Protocols & Preprocessing
+X_new = pd.read_csv("your_genome_features.csv", index_col=0)
+training_cols = pd.read_csv("features/X_combined.csv", index_col=0, nrows=0).columns
+X_new = X_new.reindex(columns=training_cols, fill_value=0)
 
-The preprocessing pipeline relies on standard bioinformatics frameworks. Complete, fully-tested protocol guides are available here:
-
-1.  **Genome Annotation Protocol:** See [Prokka Setup Guide](file:///c:/Users/akhya/Documents/GitHub/ARMOR/data_processing/Prokka_setup.txt) to annotate assembly FASTAs.
-2.  **Pangenome Matrix Extraction:** See [Panaroo Setup Guide](file:///c:/Users/akhya/Documents/GitHub/ARMOR/data_processing/panaroo_setup.txt) to construct the core and accessory genome matrices.
-3.  **Variant & SNP Disruption Mapping:** See [Snippy Setup Guide](file:///c:/Users/akhya/Documents/GitHub/ARMOR/data_processing/snippy_setup.txt) to map chromosomal mutations.
-
----
-
-## Citation & Research Attribution
-
-If you reference the ARMOR multi-omic feature extraction scheme, its C# training infrastructure, or its published benchmarks, please formally cite this repository:
-
-```text
-Akhyar, A. (2026). ARMOR: Antibiotic Resistance Modelling through Omics and Resistance-gene analysis using High-Dimensional Pangenomics and Type-Safe ML.NET LightGBM Tree Architectures. Graduate Research Infrastructure Project, UET Lahore. DOI: 10.5281/zenodo.20369885 
+sess = rt.InferenceSession("models/amikacin.onnx")
+probs = sess.run(None, {"Features": X_new.values.astype("float32")})[1][:, 1]
+print(f"Resistance probability: {probs[0]:.4f}")
+print(f"Prediction: {'Resistant' if probs[0] >= 0.5 else 'Susceptible'}")
 ```
 
-> **Developed by Akhyar Ahmad**  
-> AMR Machine Learning Infrastructure Group — UET Lahore 2025
+---
+
+## Bioinformatics Preprocessing
+
+| Step | Tool | Output |
+|:---|:---|:---|
+| Genome annotation | Prokka 1.14 | .gff, .faa |
+| Pangenome construction | Panaroo 1.3 | gene_presence_absence.Rtab |
+| AMR gene detection | CARD RGI 6.x | .json per genome |
+| Variant calling | Snippy 4.6 + SnpEff | snps.vcf per genome |
+| Reference genome | HS11286 (CP003200) | GenBank .gbk |
+
+Setup guides: [Prokka](data_processing/Prokka_setup.txt) |
+[Panaroo](data_processing/Panaroo_setup.txt) |
+[Snippy](data_processing/Snippy_setup.txt)
+
+---
+
+## Data Availability
+
+Feature matrices, phenotype labels, trained models, and ONNX files are archived at:
+
+> Zenodo: [10.5281/zenodo.20369885](https://doi.org/10.5281/zenodo.20369885)
+
+Raw genome assemblies are available from BV-BRC under NCBI Taxon ID 573.
+Genome IDs are listed in `features/available_genome_ids.txt`.
+
+---
+
+## Citation
+
+```bibtex
+@software{akhyar_armor_2026,
+  author    = {Ahmad, Akhyar},
+  title     = {{ARMOR}: Antibiotic Resistance Modelling through Omics
+               and Resistance-gene analysis},
+  year      = {2026},
+  publisher = {Zenodo},
+  doi       = {10.5281/zenodo.20369885},
+  url       = {https://doi.org/10.5281/zenodo.20369885},
+  note      = {University of Engineering and Technology Lahore}
+}
+```
+
+---
+
+## References
+
+1. Do VH et al. PanKA: Leveraging population pangenome to predict antibiotic resistance.
+   *iScience* 27(9):110623, 2024. https://doi.org/10.1016/j.isci.2024.110623
+2. Improved prediction of AMR in *Klebsiella pneumoniae* using machine learning.
+   *bioRxiv*, 2024. https://doi.org/10.1101/2024.12.10.627815
+3. Alcock BP et al. CARD 2023. *Nucleic Acids Research* 51(D1):D690-D699, 2023.
+4. Tonkin-Hill G et al. Panaroo pipeline. *Genome Biology* 21:180, 2020.
+5. Seemann T. Snippy. https://github.com/tseemann/snippy, 2015.
+
+---
+
+*Developed by Akhyar Ahmad — University of Engineering and Technology Lahore, Founder & CEO Oryvo AI*
+*ORCID: [0009-0002-3761-3145](https://orcid.org/0009-0002-3761-3145)*
