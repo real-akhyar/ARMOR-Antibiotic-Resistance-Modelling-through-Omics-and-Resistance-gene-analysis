@@ -1,6 +1,6 @@
 # ARMOR: Antibiotic Resistance Modelling through Omics and Resistance-gene analysis
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20369885.svg)](https://doi.org/10.5281/zenodo.20369885)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20389161.svg)](https://doi.org/10.5281/zenodo.20389161)
 [![ORCID](https://img.shields.io/badge/ORCID-0009--0002--3761--3145-brightgreen)](https://orcid.org/0009-0002-3761-3145)
 [![.NET](https://img.shields.io/badge/.NET-9.0-blue)](https://dotnet.microsoft.com/)
 [![ML.NET](https://img.shields.io/badge/ML.NET-3.0-orange)](https://dotnet.microsoft.com/apps/machinelearning-ai/ml-dotnet)
@@ -287,8 +287,8 @@ Genome IDs are listed in `features/available_genome_ids.txt`.
                and Resistance-gene analysis},
   year      = {2026},
   publisher = {Zenodo},
-  doi       = {10.5281/zenodo.20369885},
-  url       = {https://doi.org/10.5281/zenodo.20369885},
+  doi       = {10.5281/zenodo.20389161},
+  url       = {https://doi.org/10.5281/zenodo.20389161},
   note      = {University of Engineering and Technology Lahore}
 }
 ```
