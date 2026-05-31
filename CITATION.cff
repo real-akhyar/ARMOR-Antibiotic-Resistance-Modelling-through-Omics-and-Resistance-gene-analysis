@@ -1,0 +1,12 @@
+# CITATION.cff
+cff-version: 1.2.0
+title: "ARMOR: AMR Prediction for K. pneumoniae"
+authors:
+  - family-names: Ahmad
+    given-names: Akhyar
+    orcid: "https://orcid.org/0009-0002-3761-3145"
+    affiliation: "UET Lahore / ORYVO AI"
+version: 1.1.0
+date-released: 2025-05-29
+doi: 10.5281/zenodo.20389161
+repository-code: "https://github.com/real-akhyar/ARMOR-Antibiotic-Resistance-Modelling-through-Omics-and-Resistance-gene-analysis"
