@@ -41,10 +41,15 @@ Holdout: 325 isolates from named BioProjects (`PRJNA376414`, `PRJEB31361`,
 
 | Antibiotic | ARMOR AUC (95% CI) | AUPRC | F1 | Sensitivity | Specificity | Precision | n (holdout) | Resistance rate |
 |:---|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| **Amikacin** | **0.9865 [0.961, 1.000]** | **0.9300** | **0.8810** | **0.9024** | **0.9764** | **0.8605** | **295** | **13.9%** |
-| **Pip/Tazo** | **0.9395 [0.910, 0.969]** | **0.9595** | **0.8681** | **0.8993** | **0.7526** | **0.8389** | **236** | **58.9%** |
-| **Cefepime** | **0.9075 [0.871, 0.944]** | **0.9453** | **0.8766** | **0.8882** | **0.7500** | **0.8654** | **236** | **64.4%** |
+| **Amikacin** | **0.9865 [0.961, 1.000]** | **0.9308** | **0.8810** | **0.9024** | **0.9764** | **0.8605** | **295** | **13.9%** |
+| **Pip/Tazo** | **0.9395 [0.910, 0.969]** | **0.9596** | **0.8681** | **0.8993** | **0.7526** | **0.8389** | **236** | **58.9%** |
+| **Cefepime** | **0.9075 [0.871, 0.944]** | **0.9455** | **0.8766** | **0.8882** | **0.7500** | **0.8654** | **236** | **64.4%** |
 | Fosfomycin | — | — | — | — | — | — | 0 | — |
+
+**Results Analysis:**
+* **Amikacin:** The hold-out AUC of **0.9865** and AUPRC of **0.9308** represent a **6.7-fold lift** over the 13.9% random precision baseline, showing high precision in predicting resistance on completely unseen study cohorts.
+* **Piperacillin/Tazobactam:** The model generalizes stably with a holdout AUC of **0.9395** and AUPRC of **0.9596**.
+* **Cefepime:** Holdout AUC reaches **0.9075** with an AUPRC of **0.9455**.
 
 Fosfomycin: no held-out BioProject contained genomes with fosfomycin phenotype
 annotations in BV-BRC metadata. This is a data availability limitation.
@@ -66,6 +71,38 @@ Fosfomycin is reported from CV only (v1.0.0, AUC 0.816 [0.763, 0.869]).
 | Amikacin | 0.9522 | **0.9865** | +0.034 | Improved — conserved resistance determinants |
 | Pip/Tazo | 0.9577 | 0.9395 | -0.018 | Stable generalization |
 | Cefepime | 0.9143 | 0.9075 | -0.007 | Near-identical across splits |
+
+### Biological Validation & Explainability (SHAP Mappings)
+
+To transition model explainability from statistical correlations to biological validation, we mapped the top anonymous pangenome group features identified by SHAP back to their biological identities using sequence homology search (UniProtKB SPARQL queries and ColabFold MMseqs2):
+
+1. **group_6187** -> **Lipoprotein YajG** (UniProt [A0A0H3GSR0](https://www.uniprot.org/uniprotkb/A0A0H3GSR0), locus `KPHS_11360`). Outer membrane lipoprotein YajG plays a role in envelope stress response and cell wall integrity, representing cell envelope stability in resistant isolates.
+2. **group_228** -> **ABC transporter permease** (UniProt [W8UV87](https://www.uniprot.org/uniprotkb/W8UV87), locus `KPNJ2_02783`). A membrane transporter subunit involved in active efflux or transport of substrates.
+3. **group_5501** -> **Putative bacteriophage protein** (UniProt [A0A0H3GWH7](https://www.uniprot.org/uniprotkb/A0A0H3GWH7), locus `KPHS_22860`). A prophage-encoded structural marker highly associated with high-risk clonal lineages (e.g., ST258).
+4. **group_131** -> **Carbohydrate outer membrane porin** (UniProt [A0A448SH19](https://www.uniprot.org/uniprotkb/A0A448SH19), locus `I5U13_21145`). A porin variant regulating outer membrane permeability and drug entry.
+5. **group_5399** -> **Uncharacterized protein** (UniProt [K1MX73](https://www.uniprot.org/uniprotkb/K1MX73) / locus `FHD44_05690`).
+6. **group_8107** -> **Transmembrane permease** (UniProt [A0A6I5ALU9](https://www.uniprot.org/uniprotkb/A0A6I5ALU9), locus `TML_05960`). Involved in the cellular transport and potential efflux of drugs.
+7. **group_5636** -> **DUF3560 domain-containing protein / Hydrolase** (UniProt [A0A1C3QZX8](https://www.uniprot.org/uniprotkb/A0A1C3QZX8), locus `CFY86_28610`).
+8. **group_5520** -> **AlpA family transcriptional regulator** (UniProt [A0ABY7L1M2](https://www.uniprot.org/uniprotkb/A0ABY7L1M2), locus `O4000_21260`). A DNA-binding transcription factor regulating prophage excision and mobile element conjugation.
+
+#### Explainability Audits & Biological Consistency:
+
+* **Collinearity & Redundant RGI Split Suppression (Amikacin):** 
+  We verified that although 742 CARD-derived `rgi__` features are present in the matrix, the models rarely split on them. Instead, the model splits heavily on the pangenome representative gene feature `pan__aacA4` (split 79 times) to predict amikacin resistance. In tree-based models like LightGBM, when two features share high collinearity, the model arbitrarily selects one to carry the split, making the other redundant. Because `pan__aacA4` contains identical presence/absence information to the `rgi__` call across resistant strains, the SHAP values accrue entirely to the pangenome gene cluster, suppressing the RGI feature's SHAP values.
+* **Porin Disruption as a Clonal Confounder:**
+  The appearance of `snp__ompK36_disrupted` as a top predictor of Amikacin resistance (split 61 times) is a clonal background/lineage confounder rather than direct biochemical causation. Aminoglycosides like amikacin cross the bacterial membrane via active transport driven by the proton motive force, not via outer membrane porins like `ompK36`. However, `ompK36` disruption is a hallmark of carbapenem-resistant epidemic clones (e.g., ST258 and ST15) that dominate clinical settings and co-carry plasmids containing aminoglycoside-modifying enzymes. Thus, the model uses `snp__ompK36_disrupted` as a lineage biomarker.
+
+#### SHAP Beeswarm Plots (BioProject Hold-out Validation):
+
+![SHAP Beeswarm Amikacin](results/external_validation/figures/shap_beeswarm_amikacin.png)
+*Figure: SHAP Beeswarm plot for Amikacin demonstrating feature impact directionality on the independent hold-out validation set.*
+
+![SHAP Beeswarm Cefepime](results/external_validation/figures/shap_beeswarm_cefepime.png)
+*Figure: SHAP Beeswarm plot for Cefepime demonstrating feature impact directionality on the independent hold-out validation set.*
+
+![SHAP Beeswarm Piperacillin/Tazobactam](results/external_validation/figures/shap_beeswarm_piperacillin_tazobactam.png)
+*Figure: SHAP Beeswarm plot for Piperacillin/Tazobactam demonstrating feature impact directionality on the independent hold-out validation set.*
+
 
 The amikacin model improving on held-out data confirms that learned features —
 primarily CARD allele-level profiles of AAC(6'), APH(3''), and ANT
@@ -186,31 +223,43 @@ mutation; confirmed by 99.68% prevalence). Retained: *fosA3* and *glpT_snp*.
 ## Repository Structure
 
 ```
-ARMOR-By-Akhyar/
-├── AMR.Training/
-│   ├── Services/
-│   │   ├── DataLoader.cs             # CSV ingestion, BioProject split logic
-│   │   ├── Trainer.cs                # Per-antibiotic LightGBM, CV and holdout
-│   │   └── Evaluator.cs              # Metrics output and CSV export
-│   ├── Models/
-│   │   └── ModelResult.cs
-│   └── Program.cs
+ARMOR/
 ├── data_processing/
-│   ├── Prokka_setup.txt
-│   ├── Panaroo_setup.txt
-│   └── Snippy_setup.txt
-├── features/                         # Full data files on Zenodo
-│   ├── X_combined.csv                # 39,876-feature matrix (2,507 genomes)
-│   ├── Y_labels_aligned.csv          # R/S labels (v1.0.0)
-│   └── Y_labels_with_bioproject.csv  # Labels with BioProject IDs (v1.1.0)
-├── models/
+│   ├── Prokka_setup.txt              # Setup guide for genome annotation
+│   ├── panaroo_setup.txt             # Setup guide for pangenome construction
+│   └── snippy_setup.txt              # Setup guide for variant calling
+├── localDB/                           # Reference database files (CARD, etc.)
+│   ├── card.json
+│   ├── proteindb.fsa
+│   └── rnadb.fsa
+├── model_training/                    # C# training pipeline (ML.NET)
+│   ├── AMR.Training/
+│   │   ├── Services/
+│   │   │   ├── DataLoader.cs         # CSV Ingestion, BioProject split logic
+│   │   │   ├── Trainer.cs            # LightGBM training, CV & holdout logic
+│   │   │   └── Evaluator.cs          # Validation metrics calculation
+│   │   ├── Models/
+│   │   └── Program.cs
+│   └── features/                      # Feature matrix and label files (refer to Zenodo)
+│       ├── X_combined.csv            # 39,876-feature matrix
+│       └── Y_labels_with_bioproject.csv
+├── ONNX/                              # Exported, production-ready ONNX models
 │   ├── amikacin.onnx
 │   ├── cefepime.onnx
 │   ├── piperacillin_tazobactam.onnx
 │   └── fosfomycin.onnx
-└── results/
-    ├── model_results_v1.0.csv
-    └── model_results_v1.1.csv
+├── results/                           # Hold-out validation and explainability results
+│   ├── blast_mappings.csv             # Homology mappings for anonymous features
+│   └── external_validation/
+│       ├── external_validation_results.csv
+│       ├── predictions_amikacin.csv
+│       └── figures/                   # Validation curves and SHAP plots
+│           ├── roc_curves_external.png
+│           ├── pr_curves_external.png
+│           ├── confusion_matrices_external.png
+│           ├── shap_beeswarm_amikacin.png
+│           └── shap_waterfall_amikacin.png
+└── external_validation_shap.py        # Python pipeline for holdout validation & SHAP
 ```
 
 ---
