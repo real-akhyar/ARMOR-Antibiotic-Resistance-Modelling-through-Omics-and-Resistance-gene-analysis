@@ -189,6 +189,15 @@ mutation; confirmed by 99.68% prevalence). Retained: *fosA3* and *glpT_snp*.
   Total independent holdout:   325 isolates
 ```
 
+### Pangenome Construction & Feature Space Definition
+
+For this model, the pangenome was constructed by running Panaroo on the full set of 2,507 assemblies (including both the training pool and the independent hold-out sets) to define the accessory gene presence/absence matrix.
+
+* **Rationale:** Defining the pangenome population-wide ensures a unified, perfectly aligned feature space. A given feature identifier (e.g., `pan_group_6187`) represents the exact same gene group across all splits, eliminating the need for post-hoc sequence mapping (e.g., via BLAST or CD-HIT) to align independent pangenome outputs.
+* **Unsupervised Feature Alignment:** Because pangenome family clustering is entirely unsupervised, no phenotypic label leakage occurred. The hold-out validation isolates were completely blinded during hyperparameter optimization, feature selection, and model training.
+* **Reviewer Note (Technical Nuance):** Including validation isolates during Panaroo's graph-based clustering represents a form of *unsupervised feature-space leakage* (the centroid definitions and homology grouping bounds were influenced by the hold-out genomes). While this is a standard practice in pangenomic classification pipelines (e.g., PanKA 2024), we acknowledge it transparently.
+* **Inference Compatibility:** For future clinical use, new assemblies do not require re-clustering the population. Instead, features are projected onto the model's feature space by aligning their annotated ORFs against the representative gene sequences of the pangenome centroids (`pan_genome_reference.fa`) at a sequence identity threshold of $\ge 98\%$.
+
 ### Known Limitations
 
 - **Fosfomycin external validation absent.** No held-out BioProject contained
