@@ -34,15 +34,15 @@ namespace AMR.Training.Services
             int n  = X.GetLength(0);
             int nf = X.GetLength(1);
 
-            // 1. Identify our strict publication holdout target studies
+
             var externalStudies = new HashSet<string> { "PRJNA376414", "PRJEB31361", "PRJEB28400", "PRJEB6574" };
 
-            // 2. Build the underlying data rows, tracking metadata internally
+
             var allRows = Enumerable.Range(0, n).Select(i =>
             {
                 var feats = new float[nf];
                 for (int j = 0; j < nf; j++) feats[j] = X[i, j];
-                
+
                 string gid = genomeIds[i];
                 string bp = genomeToBioProject.TryGetValue(gid, out var project) ? project : "Unknown";
 
@@ -54,7 +54,7 @@ namespace AMR.Training.Services
                 };
             }).ToList();
 
-            // 3. Perform a rigorous Study-Level Holdout Split
+
             var trainRows = allRows.Where(r => !r.IsExternal).ToList();
             var testRows  = allRows.Where(r => r.IsExternal).ToList();
 
@@ -69,7 +69,7 @@ namespace AMR.Training.Services
             Console.WriteLine($"  • External Cohort: {testRows.Count} (Resistant: {nTestPositive} | Susceptible: {nTestNegative})");
             Console.WriteLine(new string('-', 65));
 
-            // Guard rails to protect minority class evaluation boundaries
+
             if (nTrainPositive < 10 || nTrainNegative < 10 || nTestPositive == 0 || nTestNegative == 0)
             {
                 Console.WriteLine("  ⚠️ SKIP — Insufficient samples within minority validation cohorts.");
@@ -85,7 +85,7 @@ namespace AMR.Training.Services
             IDataView trainData = _ml.Data.LoadFromEnumerable(simpleTrainRows, schema);
             IDataView testData  = _ml.Data.LoadFromEnumerable(simpleTestRows, schema);
 
-            // Configure balancing weights based strictly on training pool distribution
+
             float scalePosWeight = (float)nTrainNegative / Math.Max(nTrainPositive, 1);
 
             var options = new LightGbmBinaryTrainer.Options
@@ -109,7 +109,7 @@ namespace AMR.Training.Services
                 }
             };
 
-            // Inject domain-specific hyperparameter adaptations
+
             string abLower = antibiotic.ToLower().Trim();
             if (abLower.Contains("cefepime"))
             {
@@ -151,16 +151,16 @@ namespace AMR.Training.Services
             var predictions = trainedModel.Transform(testData);
             var metrics     = _ml.BinaryClassification.Evaluate(predictions, labelColumnName: "Label");
 
-            
-            // HANLEY-MCNEIL 95% CONFIDENCE INTERVALS
-            
+
+
+
             double auc = metrics.AreaUnderRocCurve;
             double q1  = auc / (2.0 - auc);
             double q2  = (2.0 * auc * auc) / (1.0 + auc);
-            
+
             double num = (auc * (1.0 - auc)) + (nTestPositive - 1) * (q1 - auc * auc) + (nTestNegative - 1) * (q2 - auc * auc);
             double den = (double)nTestPositive * nTestNegative;
-            
+
             double se   = Math.Sqrt(Math.Max(0, num / den));
             double ci95 = 1.96 * se;
 
@@ -170,11 +170,11 @@ namespace AMR.Training.Services
             Console.WriteLine($"  ✨ Holdout AUC: {auc:F4} (95% CI: [{ciLow:F4}, {ciHigh:F4}]) | AUPRC: {metrics.AreaUnderPrecisionRecallCurve:F4}");
             Console.WriteLine($"  ✨ F1-Score:    {metrics.F1Score:F4} | Accuracy: {metrics.Accuracy:F4}");
 
-            
+
             string abSafe = antibiotic.Replace("/", "_").Replace(" ", "_");
             string modelPath = Path.Combine(_modelsDir, $"{abSafe}.zip");
             _ml.Model.Save(trainedModel, trainData.Schema, modelPath);
-            
+
             ExportToOnnx(trainedModel, trainData, abSafe);
 
             return new ModelResult

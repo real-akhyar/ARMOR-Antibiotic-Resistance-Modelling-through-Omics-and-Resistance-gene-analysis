@@ -1,29 +1,9 @@
-# ==============================================================================
-# BIOINFORMATICS PIPELINE PROTOCOL: VARIANT CALLING VIA SNIPPY
-# ==============================================================================
-# Framework: Snippy (Rapid haploid variant calling and core genome alignment)
-# Target Species: Klebsiella pneumoniae (NCBI Taxon 573)
-# Purpose: Core chromosomal SNP & Indel variant calling / disruption mapping
-# Developed by: Akhyar Ahmad (AMR ML Infrastructure Group, UET Lahore)
-# ==============================================================================
-
-# ------------------------------------------------------------------------------
-# STEP 1: INITIALIZE COMPUTER NODE & SYSTEM DEPENDENCIES
-# ------------------------------------------------------------------------------
-# Access your remote cloud computing node and install basic administrative tools.
-
 # Log into the remote AWS instance
-ssh -i ~/.ssh/panaroo-key.pem ubuntu@ip
+# ssh -i ~/.ssh/panaroo-key.pem ubuntu@ip
 
-# Upgrade active packages and install core libraries
+# Upgrade packages and install core libraries
 sudo apt-get update && sudo apt-get upgrade -y
 sudo apt-get install unzip python3-pip -y
-
-
-# ------------------------------------------------------------------------------
-# STEP 2: INSTALL MINICONDA ENVIRONMENT & TOOLS
-# ------------------------------------------------------------------------------
-# Configure a clean Conda instance and get file downloading modules.
 
 # Download and install Miniconda3
 mkdir -p ~/miniconda3
@@ -31,92 +11,43 @@ wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/
 bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
 rm -rf ~/miniconda3/miniconda.sh
 
-# Initialize shell scripts for Conda commands
+# Initialize shell scripts for Conda
 ~/miniconda3/bin/conda init bash
 source ~/.bashrc
 
-# Get Google Drive Downloader tool in base conda environment
+# Install gdown in base env
 conda install -c conda-forge gdown -y
 
-
-# ------------------------------------------------------------------------------
-# STEP 3: CREATE ISOLATED SNIPPY ENVIRONMENT
-# ------------------------------------------------------------------------------
-# Construct the dedicated environment including both Snippy and GNU Parallel.
-
+# Create isolated Conda environment for Snippy
 conda create -n snippy_env -c conda-forge -c bioconda -c defaults snippy parallel -y
 conda activate snippy_env
 
-
-# ------------------------------------------------------------------------------
-# STEP 4: RETRIEVE COHORT ASSEMBLIES & REFERENCE GENOMES
-# ------------------------------------------------------------------------------
-# Download references and genomes using drive links
-
-# Prepare working project directories
+# Prepare project directory
 mkdir -p ~/snippy_cloud && cd ~/snippy_cloud
 
-# Note: Deactivate env temporarily or run in a subshell if gdown is in base
-# (GO BACK IN BASE ENV TO USE GDOWN)
-
-# Download and extract the reference structures
+# Download reference structure and raw assemblies
 gdown "https://drive.google.com/file/d/....?usp=sharing" -O structure.zip
 unzip structure.zip && rm structure.zip
-
-# Download and extract raw assembly cohorts
 gdown "https://drive.google.com/file/d/....?usp=sharing" -O ./genomes/genomes.zip
 cd ./genomes && unzip genomes.zip && rm genomes.zip && cd ..
 
-
-# ------------------------------------------------------------------------------
-# STEP 5: DEPLOY PARALLEL COMPUTATION WRAPPERS
-# ------------------------------------------------------------------------------
-# Create the batch-running shell scripts to parallelize Snippy across multiple cores.
-
-# Define execution scripts using editor (or pipe directly):
-# 1. launch.sh
-# 2. run_snippy.sh
+# Setup launch.sh and run_snippy.sh
 nano launch.sh
 nano run_snippy.sh
-
-# Authorize launchers for execution
 chmod +x run_snippy.sh launch.sh
 
-# Suppress GNU Parallel citation splash screen
+# Suppress GNU Parallel citation splash screen and run
 parallel --citation <<< "will cite"
-
-# Execute the parallel Snippy pipeline
 ./launch.sh
 
-
-# ------------------------------------------------------------------------------
-# STEP 6: RETRIEVE & CONSOLIDATE STRUCTURAL RESULTS
-# ------------------------------------------------------------------------------
-# Cleanly extract only the non-redundant SNPs, variant-call tables (snps.tab), and
-# annotation files for ML.NET feature matrices.
-
-# 1. Create a clean staging directory
+# Staging results
 mkdir -p ~/snippy_lean_exports
-
-# 2. Navigate to your output directory
 cd ~/snippy_local/output
 
-# 3. Copy only the strict, non-redundant compressed data and annotation reports
-# Example filter formats:
-# find . -type f \( -name "*.vcf.gz*" -o -name "*.csv" -o -name "*.gff" -o -name "*.csi" -o -name "*.html" \) \
-
-# Copy targeted SNPs VCF and tab files while keeping the hierarchical folder naming
+# Copy targeted SNPs VCF and tab files keeping folder hierarchy
 find . -type f \( -name "snps.vcf.gz" -o -name "snps.tab" \) -exec cp --parents {} ~/snippy_lean_exports/ \;
 
-
-# ------------------------------------------------------------------------------
-# STEP 7: ARCHIVE & EXPORT HIGH-DENSITY SNP MAPS
-# ------------------------------------------------------------------------------
-# Package the extracted staging files into a compact package ready for pipeline training.
-
-# Navigate to consolidated staging folder
+# Archive the extracted staging files
 cd ~/snippy_lean_exports
-
-# Install compression utility and build optimized zip archive
 sudo apt-get install zip -y
 zip -1 -r ~/snippy_results.zip .

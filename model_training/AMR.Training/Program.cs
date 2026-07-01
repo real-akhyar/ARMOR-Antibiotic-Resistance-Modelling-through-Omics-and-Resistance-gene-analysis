@@ -31,7 +31,7 @@ namespace AMR.Training
             Console.WriteLine("============================================================");
 
             var loader = new DataLoader(featuresDir);
-            
+
             Console.WriteLine("Loading multi-omic integrated feature matrix...");
             var (X, genomeIds, featureNames) = loader.LoadFeatures();
 
@@ -41,7 +41,7 @@ namespace AMR.Training
 
             Console.WriteLine("\n[AUDIT] Evaluating independent BioProject cohort distribution...");
             var studyGroups = genomeIds
-                .Select(id => genomeToBioProject.TryGetValue(id, out string? bp) ? bp : "Unknown") // 👈 Changed 'string' to 'string?'
+                .Select(id => genomeToBioProject.TryGetValue(id, out string? bp) ? bp : "Unknown")
                 .GroupBy(bp => bp)
                 .OrderByDescending(g => g.Count())
                 .ToList();
@@ -51,7 +51,7 @@ namespace AMR.Training
                 double percentage = (100.0 * g.Count()) / genomeIds.Length;
                 Console.WriteLine($"  -> BioProject {g.Key,-12}: {g.Count(),4} isolates ({percentage:F1}%)");
             }
-            
+
             var externalStudies = new HashSet<string> { "PRJNA376414", "PRJEB31361", "PRJEB28400", "PRJEB6574" };
             int totalValidationSamples = studyGroups.Where(g => externalStudies.Contains(g.Key)).Sum(g => g.Count());
             int totalTrainingSamples = genomeIds.Length - totalValidationSamples;
@@ -78,9 +78,9 @@ namespace AMR.Training
             {
                 string standardTarget = ab.Trim().ToLower();
 
-                string? matchedKey = allLabels.Keys.FirstOrDefault(k => 
-                    k == standardTarget || 
-                    k == standardTarget.Replace("/", "_") || 
+                string? matchedKey = allLabels.Keys.FirstOrDefault(k =>
+                    k == standardTarget ||
+                    k == standardTarget.Replace("/", "_") ||
                     k.Replace("_", "/") == standardTarget);
 
                 if (string.IsNullOrEmpty(matchedKey))
@@ -101,7 +101,7 @@ namespace AMR.Training
                 results.Add(result);
             }
 
-            // Generate complete final evaluation breakdowns and scoreboards
+
             evaluator.PrintComparisonTable(results, pankaAUC);
             evaluator.SaveResultsCSV(results, Path.Combine(resultsDir, "model_results.csv"));
 

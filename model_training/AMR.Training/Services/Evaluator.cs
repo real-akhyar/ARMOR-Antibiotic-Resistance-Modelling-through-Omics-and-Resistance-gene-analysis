@@ -21,10 +21,10 @@ namespace AMR.Training.Services
             {
                 string key = r.Antibiotic.ToLower().Trim();
                 pankaAUC.TryGetValue(key, out double pVal);
-                
+
                 string outcome = "STAT_TIE";
-                
-                
+
+
                 if (r.AUC_CI95_Low > pVal) outcome = "OURS WIN";
                 else if (pVal > r.AUC_CI95_High) outcome = "PanKA COMPETE";
 
@@ -37,7 +37,7 @@ namespace AMR.Training.Services
         public void SaveResultsCSV(List<ModelResult> results, string outputPath)
         {
             var sb = new StringBuilder();
-            
+
             sb.AppendLine("antibiotic,auc,auc_ci95_low,auc_ci95_high,auprc,f1,precision,sensitivity,specificity,accuracy,n_samples,resistance_rate");
             foreach (var r in results)
             {

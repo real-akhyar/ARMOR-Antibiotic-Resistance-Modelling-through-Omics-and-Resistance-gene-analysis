@@ -17,7 +17,7 @@ namespace AMR.Training.Services
             _featuresDir = featuresDir;
         }
 
-        
+
         public (float[,] X, string[] GenomeIds, string[] FeatureNames) LoadFeatures()
         {
             var path = Path.Combine(_featuresDir, "X_combined.csv");
@@ -35,7 +35,7 @@ namespace AMR.Training.Services
             csv.ReadHeader();
             var allHeaders = csv.HeaderRecord!;
 
-        
+
             string[] featureNames = allHeaders.Skip(1).ToArray();
             Console.WriteLine($"Features count: {featureNames.Length:N0}");
 
@@ -70,7 +70,7 @@ namespace AMR.Training.Services
             return (X, genomeIds.ToArray(), featureNames);
         }
 
-        
+
         public Dictionary<string, Dictionary<string, float?>> LoadLabels(out Dictionary<string, string> genomeToBioProject)
         {
             var path = Path.Combine(_featuresDir, "Y_labels_with_bioproject_2.csv");
@@ -88,8 +88,8 @@ namespace AMR.Training.Services
             csv.ReadHeader();
             var allHeaders = csv.HeaderRecord!;
 
-        
-            string[] antibiotics = allHeaders.Skip(2).ToArray(); 
+
+            string[] antibiotics = allHeaders.Skip(2).ToArray();
             Console.WriteLine("--> Antibiotic columns registered: " + string.Join(", ", antibiotics));
 
             genomeToBioProject = new Dictionary<string, string>();
@@ -103,10 +103,10 @@ namespace AMR.Training.Services
             {
                 string genomeId = csv.GetField<string>(0)!;
                 string bioProject = csv.GetField<string>(1)!;
-                
+
                 if (string.IsNullOrEmpty(genomeId)) continue;
 
-                
+
                 genomeToBioProject[genomeId] = bioProject;
 
                 for (int i = 0; i < antibiotics.Length; i++)
@@ -114,8 +114,8 @@ namespace AMR.Training.Services
                     string standardizedKey = antibiotics[i].Trim().ToLower();
                     string rawVal = csv.GetField<string>(i + 2)!;
 
-                    if (string.IsNullOrEmpty(rawVal) || 
-                        rawVal.Equals("nan", StringComparison.OrdinalIgnoreCase) || 
+                    if (string.IsNullOrEmpty(rawVal) ||
+                        rawVal.Equals("nan", StringComparison.OrdinalIgnoreCase) ||
                         rawVal.Trim() == "")
                     {
                         result[standardizedKey][genomeId] = null;
@@ -137,7 +137,7 @@ namespace AMR.Training.Services
             return result;
         }
 
-        
+
         public (float[,] X, float[] y, string[] GenomeIds) FilterForAntibiotic(
             float[,] X,
             string[] allGenomeIds,
