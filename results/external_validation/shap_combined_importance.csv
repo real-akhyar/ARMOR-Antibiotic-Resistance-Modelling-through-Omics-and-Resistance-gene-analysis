@@ -1,87 +1,87 @@
-feature,shap_amikacin,shap_cefepime,shap_piperacillin_tazobactam
-pan__bla_2~~~bla_1~~~bla_4,,0.004822838015854358,
-pan__ccmA,,0.00938299632817507,
-pan__group_131,0.017239069119095805,0.009426454000174996,0.0003650309592485479
-pan__group_21152,,,0.0003729398399591463
-pan__group_228,0.03423477700352668,,
-pan__group_2788,,,0.00043236532062291915
-pan__group_3051,,0.005809147119522098,
-pan__group_3163,,0.004307638861238956,
-pan__group_3554,,0.003359003514051436,
-pan__group_3913,,0.007661448180675507,
-pan__group_3934,,0.004050900049507616,
-pan__group_4197,,0.004663818381726741,
-pan__group_4444,,,0.0008967605009675014
-pan__group_495,,0.002932065710425375,
-pan__group_5203,,,0.00038910146057605374
-pan__group_5399,0.014559173494577414,,
-pan__group_5501,0.031650730300694714,,
-pan__group_5520,0.006419103350490334,,
-pan__group_5636,0.0065088782757520705,,
-pan__group_5788,,,0.00046438094228506364
-pan__group_6048,,0.003476895160973074,
-pan__group_6166,,,0.0006356742158532166
-pan__group_6187,0.019898018956184385,,
-pan__group_7277,,0.004379999443888666,
-pan__group_7741,,0.0027769853323698014,
-pan__group_8107,0.011019058857113124,,
-pan__group_8443,,0.004290150418877602,
-pan__group_8559,,0.0050414874404668755,
-pan__group_9725,,0.005281290762126443,
-pan__group_9734,,0.0033696083575487103,
-pan__lamB_1~~~lamB_2~~~lamB_3,0.006843954876065251,,
-pan__lamB_2~~~lamB_4~~~lamB_3~~~lamB_1,0.036159705255180606,,
-pan__lexA_3~~~umuD_2~~~umuD_4~~~umuD_1,,0.006825580410659314,
-pan__nfsB~~~nfsB_1~~~nfsB_2,,0.01120716536417604,
-pan__smc~~~smc_2~~~smc_1,0.00804623517766595,,
-pan__traI_1~~~traI_4~~~traI_2~~~traI~~~traI_3,,,0.0012474411576986276
-pan__traN_1~~~traN~~~traN_3,0.005329020641744137,,
-pan__tssB1_2~~~tssB1_1~~~tssB1,,0.00786576300859451,
-pan__tssB1~~~tssB1_2,,0.006461169589310887,
-pan__tufB~~~tufA~~~tufA_2~~~tufA_1,,,0.0017871316224336608
-pan__umuC_2~~~umuC_1~~~umuC_3~~~umuC_4~~~umuC_8,,,0.0009250332638621364
-prot__1136,,,0.0011867477521300348
-prot__1412,0.008874657548964025,,
-prot__1487,,,0.0004502784833312029
-prot__1727,0.005699503798037767,,
-prot__1753,,0.003447732575237753,
-prot__1840,0.0069711295515298855,,
-prot__202,,,0.00047084680944681044
-prot__2411,0.005972137995064258,,
-prot__247,,,0.0005556022599339458
-prot__2562,,,0.00040589408576488463
-prot__2566,0.008846116211265328,,
-prot__288,0.006436097610741855,,
-prot__301,0.016176697205752134,,
-prot__3038,,0.004661364562809466,
-prot__3077,,,0.0004675372391939159
-prot__3253,,0.0043377296999096895,
-prot__3281,,,0.00042327282577752924
-prot__3316,0.0049503757134079915,,
-prot__3319,0.015725032314658167,,
-prot__3328,,,0.0003613635748624813
-prot__340,,0.0028255162350833405,0.00048192434757947876
-prot__351,,0.0054116740599274606,
-prot__3816,,,0.000598065555095674
-prot__4040,,,0.00033333716541528337
-prot__4393,0.005465052261948587,,
-prot__4739,0.0052244515642523755,,
-prot__5181,0.005782069049775604,,
-prot__5317,,,0.0005631934180855732
-prot__5357,0.02899725275859237,,
-prot__5458,,0.0036348071657121162,
-prot__5464,0.006333491176366807,,
-prot__5603,,,0.0006416853591799743
-prot__5783,,,0.0010783660709857946
-prot__5874,,0.016391497127711777,
-prot__6147,,0.003584033638238905,
-prot__6184,,,0.0012656691074371324
-prot__6392,,,0.00036757154762744965
-prot__666,,,0.0005329670161008793
-prot__712,,,0.0007310077100992177
-prot__752,,,0.0013635984659194913
-prot__82,0.0052196077741682514,,
-prot__860,0.008274894829839473,,
-prot__890,,,0.0010275305435061457
-prot__909,0.00780350650474429,,
-snp__ompK36_disrupted,0.009473253559321168,0.00894544664025307,
+feature,mapped_feature_x,shap_amikacin,mapped_feature_y,shap_cefepime,mapped_feature,shap_piperacillin_tazobactam
+pan__bla_2~~~bla_1~~~bla_4,,,Beta-lactamase (bla),0.0073204499036073735,,
+pan__ccmA,,,Cytochrome c biogenesis protein CcmA (ccmA),0.007701310738921161,,
+pan__group_131,Carbohydrate outer membrane porin (group_131),0.013306572705507266,Carbohydrate outer membrane porin (group_131),0.009615954473614699,Carbohydrate outer membrane porin (group_131),0.0004399517476558701
+pan__group_21152,,,,,Pangenome gene: group_21152,0.0004372913986444491
+pan__group_228,ABC transporter permease (group_228),0.0438801833614707,,,,
+pan__group_2788,,,,,DNA polymerase III subunit theta (group_2788),0.0003605077117681535
+pan__group_3051,,,Uncharacterized protein (group_3051) (group_3051),0.006708360046148305,,
+pan__group_3163,,,Uncharacterized protein (group_3163) (group_3163),0.004236872136592861,,
+pan__group_3913,,,Uncharacterized protein (group_3913) (group_3913),0.008854726061224932,,
+pan__group_3934,,,Maturase (group_3934),0.003543228074908258,,
+pan__group_4197,,,Phage transcriptional regulator AlpA (group_4197),0.004252607107162478,,
+pan__group_4442,,,Pangenome gene: group_4442,0.0030238751471042646,,
+pan__group_4444,,,,,Uncharacterized protein (group_4444) (group_4444),0.0009757466316223195
+pan__group_5203,,,,,Pangenome gene: group_5203,0.00046882247924804834
+pan__group_5399,Uncharacterized protein (group_5399) (group_5399),0.014260507717728623,,,,
+pan__group_5501,Putative prophage protein (group_5501),0.03466058902442455,,,,
+pan__group_5520,AlpA transcriptional regulator (group_5520),0.007642773211002347,,,,
+pan__group_5636,DUF3560 domain hydrolase (group_5636),0.009210506170988085,,,,
+pan__group_5788,,,,,Uncharacterized protein (group_5788) (group_5788),0.00066013479232788
+pan__group_6048,,,UPF0761 membrane protein (group_6048),0.004567357107996938,,
+pan__group_6166,,,,,DUF4234 domain protein (group_6166),0.0014173993319272992
+pan__group_6187,Lipoprotein YajG (group_6187),0.024565527483820907,,,,
+pan__group_7277,,,Cytochrome c biogenesis protein CcmA (group_7277),0.0041001006811857196,,
+pan__group_7741,,,Pangenome gene: group_7741,0.002875272676348683,,
+pan__group_8107,Transmembrane permease (group_8107),0.007362464040517807,,,,
+pan__group_8443,,,T6SS immunity lipoprotein Tli1-KP (group_8443),0.005817457795143127,,
+pan__group_8559,,,T9SS sorting domain protein (group_8559),0.005741876900196075,,
+pan__group_9725,,,AlpA family transcriptional regulator (group_9725),0.004573658823966981,,
+pan__group_9734,,,Pangenome gene: group_9734,0.0030855040252208738,,
+pan__lamB_1~~~lamB_2~~~lamB_3,Maltoporin LamB (lamB),0.010385821059346195,,,,
+pan__lamB_2~~~lamB_4~~~lamB_3~~~lamB_1,Maltoporin LamB (lamB),0.03370878054201603,,,,
+pan__lexA_3~~~umuD_2~~~umuD_4~~~umuD_1,,,LexA transcriptional repressor / UmuD (lexA),0.008327411308884614,,
+pan__nfsB~~~nfsB_1~~~nfsB_2,,,Oxygen-insensitive NADPH nitroreductase NfsB (nfsB),0.008262492269277569,,
+pan__smc~~~smc_2~~~smc_1,Chromosome partition protein Smc (smc),0.007158470548689368,,,,
+pan__traI_1~~~traI_4~~~traI_2~~~traI~~~traI_3,,,,,Conjugative transfer DNA helicase TraI (traI),0.0012067571878433218
+pan__traN_1~~~traN~~~traN_3,Pangenome cluster: traN,0.005553532779216763,,,,
+pan__tssB1_2~~~tssB1_1~~~tssB1,,,T6SS contractile sheath protein TssB (tssB1),0.0069497868567705125,,
+pan__tssB1~~~tssB1_2,,,T6SS contractile sheath protein TssB (tssB1),0.007243777096271513,,
+pan__tufB~~~tufA~~~tufA_2~~~tufA_1,,,,,Elongation factor Tu (tufA),0.002164638370275497
+pan__umuC_2~~~umuC_1~~~umuC_3~~~umuC_4~~~umuC_8,,,,,DNA polymerase V subunit UmuC (umuC),0.0007993169873952877
+prot__1136,,,,,Protein 3-mer: EKI (prot_1136),0.0012438322752714181
+prot__1412,Protein 3-mer: FER (prot_1412),0.009366860643029211,,,,
+prot__1487,,,,,Protein 3-mer: FIR (prot_1487),0.00048217274248599923
+prot__1727,Protein 3-mer: GAV (prot_1727),0.005957859806716442,,,,
+prot__1753,,,Protein 3-mer: GDK (prot_1753),0.006523816749453536,,
+prot__1779,,,Protein 3-mer: GER (prot_1779),0.00296277852356434,,
+prot__1840,Protein 3-mer: GHV (prot_1840),0.007046643681824205,,,,
+prot__202,,,,,Protein 3-mer: AMI (prot_202),0.0009026593714952485
+prot__2411,Protein 3-mer: IAF (prot_2411),0.005378433264791966,,,,
+prot__247,,,,,Protein 3-mer: APQ (prot_247),0.001824195817112924
+prot__2562,,,,,Protein 3-mer: IKL (prot_2562),0.00043221500515937733
+prot__2566,Protein 3-mer: IKQ (prot_2566),0.008862112984061246,,,,
+prot__288,Protein 3-mer: ARS (prot_288),0.007002284906804562,,,,
+prot__301,Protein 3-mer: ASK (prot_301),0.016053007073700425,,,,
+prot__3038,,,Protein 3-mer: KRG (prot_3038),0.004525192528963092,,
+prot__3077,,,,,Protein 3-mer: KTG (prot_3077),0.0005136717557907081
+prot__3253,,,Protein 3-mer: LGP (prot_3253),0.006629011616110804,,
+prot__3281,,,,,Protein 3-mer: LID (prot_3281),0.00045716172456741283
+prot__3316,Protein 3-mer: LKV (prot_3316),0.005994205124676231,,,,
+prot__3319,Protein 3-mer: LLA (prot_3319),0.014895076788961896,,,,
+prot__3328,,,,,Protein 3-mer: LLL (prot_3328),0.00042379131913184847
+prot__340,,,Protein 3-mer: AVI (prot_340),0.003059614077210422,Protein 3-mer: AVI (prot_340),0.0005631712079048146
+prot__351,,,Protein 3-mer: AVW (prot_351),0.0052805208414793015,,
+prot__3816,,,,,Protein 3-mer: MVD (prot_3816),0.0005809445083141371
+prot__4040,,,,,Protein 3-mer: NMD (prot_4040),0.00035918805003166217
+prot__4209,Protein 3-mer: NYF (prot_4209),0.00550718531012535,,,,
+prot__4739,Protein 3-mer: QLL (prot_4739),0.006312000110745429,,,,
+prot__5181,Protein 3-mer: RQQ (prot_5181),0.006056682512164116,,,,
+prot__5317,,,,,Protein 3-mer: SAT (prot_5317),0.0005729509145021469
+prot__5357,Protein 3-mer: SEI (prot_5357),0.029060987114906317,,,,
+prot__5458,,,Protein 3-mer: SKR (prot_5458),0.0037969071418047003,,
+prot__5464,Protein 3-mer: SLA (prot_5464),0.006636956319212913,,,,
+prot__5603,,,,,Protein 3-mer: STF (prot_5603),0.0007432717680931061
+prot__5783,,,,,Protein 3-mer: TGS (prot_5783),0.001273320943117142
+prot__5874,,,Protein 3-mer: TMS (prot_5874),0.01785080902278423,,
+prot__5970,,,,,Protein 3-mer: TSS (prot_5970),0.00037389248609543264
+prot__6147,,,Protein 3-mer: VGG (prot_6147),0.0037754352539777765,,
+prot__6184,,,,,Protein 3-mer: VIF (prot_6184),0.0014825064837932548
+prot__6392,,,,,Protein 3-mer: VVW (prot_6392),0.0004072180390357985
+prot__712,,,,,Protein 3-mer: DGQ (prot_712),0.0008628888428211185
+prot__752,,,,,Protein 3-mer: DIS (prot_752),0.0018544850945472736
+prot__82,Protein 3-mer: AFG (prot_82),0.0058631601929664615,,,,
+prot__860,Protein 3-mer: DQS (prot_860),0.009642018184065817,,,,
+prot__890,,,,,Protein 3-mer: DSG (prot_890),0.0012887398451566679
+prot__909,Protein 3-mer: DTG (prot_909),0.008527954816818239,,,,
+snp__ompK36_disrupted,ompK36 disrupted (SNP),0.008651564195752144,ompK36 disrupted (SNP),0.007995246022939682,,

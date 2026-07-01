@@ -94,13 +94,13 @@ To transition model explainability from statistical correlations to biological v
 
 #### SHAP Beeswarm Plots (BioProject Hold-out Validation):
 
-![SHAP Beeswarm Amikacin](results/external_validation/figures/shap_beeswarm_amikacin.png)
+![SHAP Beeswarm Amikacin](images/beeswarm/shap_beeswarm_amikacin.png)
 *Figure: SHAP Beeswarm plot for Amikacin demonstrating feature impact directionality on the independent hold-out validation set.*
 
-![SHAP Beeswarm Cefepime](results/external_validation/figures/shap_beeswarm_cefepime.png)
+![SHAP Beeswarm Cefepime](images/beeswarm/shap_beeswarm_cefepime.png)
 *Figure: SHAP Beeswarm plot for Cefepime demonstrating feature impact directionality on the independent hold-out validation set.*
 
-![SHAP Beeswarm Piperacillin/Tazobactam](results/external_validation/figures/shap_beeswarm_piperacillin_tazobactam.png)
+![SHAP Beeswarm Piperacillin/Tazobactam](images/beeswarm/shap_beeswarm_piperacillin_tazobactam.png)
 *Figure: SHAP Beeswarm plot for Piperacillin/Tazobactam demonstrating feature impact directionality on the independent hold-out validation set.*
 
 
@@ -237,6 +237,8 @@ ARMOR/
 │   ├── Prokka_setup.txt              # Setup guide for genome annotation
 │   ├── panaroo_setup.txt             # Setup guide for pangenome construction
 │   └── snippy_setup.txt              # Setup guide for variant calling
+├── images/                            # Publication figures
+│   └── beeswarm/                      # SHAP beeswarm plots
 ├── localDB/                           # Reference database files (CARD, etc.)
 │   ├── card.json
 │   ├── proteindb.fsa
