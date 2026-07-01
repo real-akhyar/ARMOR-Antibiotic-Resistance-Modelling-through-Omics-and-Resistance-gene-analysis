@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("AMR.Training")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+67256ce02b22397ab0d42d252cdd9022708654ad")]
 [assembly: System.Reflection.AssemblyProductAttribute("AMR.Training")]
 [assembly: System.Reflection.AssemblyTitleAttribute("AMR.Training")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
